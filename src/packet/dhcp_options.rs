@@ -271,7 +271,7 @@ pub struct DhcpOptions {
 impl DhcpOptions {
 
     pub fn count(&self) -> u8 {
-        self.options.iter().count() as u8
+        self.options.len() as u8
     } 
 
     pub fn add(&mut self, option: DhcpOption) {
@@ -290,13 +290,13 @@ impl From<DhcpOptions> for Vec<u8> {
         let mut buf: Vec<u8> = Vec::new();
 
         for option in value.options {
-            let opt_vec = Vec::from(option.1);
+            let mut opt_vec = Vec::from(option.1);
             let opt_len: u8 = opt_vec.len() as u8;
             let mut opt_buf = Vec::new();
 
             opt_buf.push(option.0);
             opt_buf.push(opt_len);
-            opt_buf.append(&mut Vec::from(opt_vec));
+            opt_buf.append(&mut opt_vec);
 
             buf.append(&mut opt_buf);
 
@@ -309,7 +309,7 @@ impl From<Vec<u8>> for DhcpOptions {
      fn from(mut data : Vec<u8>) -> Self{
 
         let mut options = DhcpOptions{ options: HashMap::new() };
-        while data.len() > 0 {
+        while !data.is_empty() {
             let code = data.remove(0);
             if code == 0u8 {
                 continue;

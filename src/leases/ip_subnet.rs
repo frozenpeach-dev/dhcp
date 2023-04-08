@@ -169,7 +169,7 @@ impl Ipv4Subnet {
         Ok(())
     }
 
-    /// Allocate an [`Ipv4Addr`] in that `Ipv4Subnet`. 
+    /// Allocate an [`Ipv4Addr`] in that `Ipv4Subnet`.
     ///
     /// If any allocated IPs that were previously allocated
     /// have been freed, they are chosen first. Otherwise,
@@ -215,9 +215,9 @@ impl Ipv4Subnet {
     /// ```
 
     pub fn force_allocate(&mut self, ip: Ipv4Addr) -> Result<(), ()> {
-        if !self.is_free(ip) { return Err(()); }; 
+        if !self.is_free(ip) { return Err(()); };
 
-        self.force_allocated.insert(ip, 1); 
+        self.force_allocated.insert(ip, 1);
 
         Ok(())
     }
