@@ -4,9 +4,12 @@ use chrono::{Duration, Utc, DateTime};
 
 use crate::netutils::hw_addr::HardwareAddress;
 
-pub struct LeaseV4 {
+use super::ip_subnet::Ipv4Subnet;
+
+pub struct LeaseV4<'a> {
 
     addr: Ipv4Addr,
+    subnet: &'a Ipv4Subnet,
     t_begin: DateTime<Utc>,
     t_end: DateTime<Utc>,
     hw_addr: HardwareAddress,
@@ -15,15 +18,21 @@ pub struct LeaseV4 {
 
 }
 
-impl LeaseV4 {
+impl<'a> LeaseV4<'a> {
 
     /// Create a new `LeaseV4` from given parameters
+    ///
+    /// The [`Ipv4Addr`] must be allocated
+    /// in the correct [`Ipv4Subnet`] before the 
+    /// creation of the `LeaseV4`
     ///
     /// # Examples:
     ///
     /// ```
+    /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
     /// let lease = LeaseV4::new(
     ///     Ipv4Addr::new(192, 168, 0, 3),
+    ///     &subnet,
     ///     Duration::hours(8),
     ///     HardwareAddress::broadcast(),
     ///     HardwareAddress::broadcast(),
@@ -35,14 +44,18 @@ impl LeaseV4 {
 
     pub fn new(
         addr: Ipv4Addr,
+        subnet: &'a Ipv4Subnet,
         duration: Duration,
         hw_addr: HardwareAddress,
         cid: HardwareAddress,
         hostname: String
-    ) -> Self {
+    ) -> Result<Self, ()> {
+
+        if !subnet.contains(addr) { return Err(()); };
+
         let t_begin = Utc::now();
         let t_end = t_begin + duration;
-        Self { addr, t_begin, t_end, hw_addr, cid, hostname }
+        Ok(Self { addr, subnet, t_begin, t_end, hw_addr, cid, hostname })
     }
 
     /// Returns the remaining [`Duration`] on the `LeaseV4`
@@ -52,8 +65,10 @@ impl LeaseV4 {
     /// # Examples:
     ///
     /// ```
+    /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
     /// let lease = LeaseV4::new(
     ///     Ipv4Addr::new(192, 168, 0, 3),
+    ///     subnet,
     ///     Duration::hours(8),
     ///     HardwareAddress::broadcast(),
     ///     HardwareAddress::broadcast(),
@@ -76,8 +91,10 @@ impl LeaseV4 {
     /// # Examples: 
     ///
     /// ```
+    /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
     /// let mut lease = LeaseV4::new(
     ///     Ipv4Addr::new(192, 168, 0, 3),
+    ///     subnet,
     ///     Duration::hours(8),
     ///     HardwareAddress::broadcast(),
     ///     HardwareAddress::broadcast(),
@@ -126,6 +143,12 @@ impl LeaseV4 {
     ) -> HardwareAddress {
         self.hw_addr
     }
+
+    pub fn subnet(
+        &self
+    ) -> &Ipv4Subnet {
+        self.subnet
+    }
 }
 
 #[cfg(test)]
@@ -135,13 +158,15 @@ mod tests {
 
     #[test]
     fn test_lease_creation() {
+        let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         let lease = LeaseV4::new(
             Ipv4Addr::new(192, 168, 0, 3),
+            &subnet,
             Duration::hours(8),
             HardwareAddress::broadcast(),
             HardwareAddress::broadcast(),
             String::from("test_lease"),
-        );
+        ).unwrap();
 
         assert!(lease.hostname == "test_lease");
         assert!(lease.addr() == Ipv4Addr::new(192, 168, 0, 3));
@@ -149,13 +174,15 @@ mod tests {
 
     #[test]
     fn test_lease_time_extend() {
+        let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         let mut lease = LeaseV4::new(
             Ipv4Addr::new(192, 168, 0, 3),
+            &subnet,
             Duration::hours(8),
             HardwareAddress::broadcast(),
             HardwareAddress::broadcast(),
             String::from("test_lease"),
-        );
+        ).unwrap();
 
         assert!(lease.remaining() < Duration::hours(8));
         lease.extend(Duration::hours(2)).unwrap();

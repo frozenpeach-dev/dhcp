@@ -222,8 +222,9 @@ impl Ipv4Subnet {
         Ok(())
     }
 
-
-
+    pub fn prefix(&self) -> u8 {
+        self.prefix
+    }
 }
 
 #[cfg(test)]
