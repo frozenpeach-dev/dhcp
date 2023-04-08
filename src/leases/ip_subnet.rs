@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::{net::Ipv4Addr, collections::HashMap};
 
 
 /// `Ipv4Subnet` provides an abstraction layer over 
@@ -8,6 +8,7 @@ pub struct Ipv4Subnet {
     network_addr: Ipv4Addr,
     alloc_ptr: u32,
     released: Vec<Ipv4Addr>,
+    force_allocated: HashMap<Ipv4Addr, usize>,
     prefix: u8,
 
 }
@@ -24,10 +25,11 @@ impl Ipv4Subnet {
     /// ```
 
     pub fn new(network_addr: Ipv4Addr, prefix: u8) -> Self {
-        Self { network_addr, alloc_ptr: 1, released: Vec::new(), prefix }
+        Self { network_addr, alloc_ptr: 1, released: Vec::new(), force_allocated: HashMap::new(), prefix }
     }
 
-    /// Returns the network address corresponding to the subnet
+    /// Returns the network address corresponding to the
+    /// `Ipv4Subnet`
     ///
     /// # Examples: 
     ///
@@ -39,7 +41,8 @@ impl Ipv4Subnet {
         self.network_addr
     }
 
-    /// Returns the broadcast address corresponding to the subnet
+    /// Returns the broadcast address corresponding to the
+    /// `Ipv4Subnet`
     ///
     /// # Examples: 
     ///
@@ -47,18 +50,18 @@ impl Ipv4Subnet {
     /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
     /// assert!(subnet.broadcast() == Ipv4Addr::new(192, 168, 0, 255));
     /// ```
+
     pub fn broadcast(&self) -> Ipv4Addr {
         let wildcard_bits_count = 32 - self.prefix;
         let network_bytes = u32::from(self.network_addr);
 
-        let broadcast_bytes = network_bytes | (2 << (wildcard_bits_count - 1)) - 1;
+        let broadcast_bytes = network_bytes | ((2 << (wildcard_bits_count - 1)) - 1);
 
         Ipv4Addr::from(broadcast_bytes)
-
     }
 
     /// Returns the number of IP addresses belonging to this
-    /// subnet.
+    /// `Ipv4Subnet`.
     ///
     /// # Examples : 
     ///
@@ -72,7 +75,7 @@ impl Ipv4Subnet {
         2 << (wc_bytes_count - 1)
     }
 
-    /// Returns the number of IP addresses in this subnet
+    /// Returns the number of IP addresses in this `Ipv4Subnet`
     /// that have been allocated.
     ///
     /// # Examples:
@@ -84,11 +87,11 @@ impl Ipv4Subnet {
     /// ```
 
     pub fn allocated_count(&self) -> u32 {
-        self.alloc_ptr - 1 - self.released.len()as u32
+        self.alloc_ptr - 1 - self.released.len() as u32
     }
 
     /// Check if a given [`Ipv4Addr`] belongs to 
-    /// this subnet.
+    /// this `Ipv4Subnet`.
     ///
     /// # Examples: 
     ///
@@ -96,16 +99,15 @@ impl Ipv4Subnet {
     /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
     /// assert!(subnet.contains(Ipv4Addr::new(192, 168, 0, 3)));
     /// ```
+
     pub fn contains(&self, ip: Ipv4Addr) -> bool {
-
         (u32::from(self.network_addr) <= u32::from(ip)) && (u32::from(self.broadcast()) >= u32::from(ip))
-
     }
 
     /// Check if a given [`Ipv4Addr`] has been allocated
     /// in that subnet. Returns false if it is yet to be 
     /// allocated, or if it does not belong to this
-    /// subnet.
+    /// `Ipv4Subnet`.
     ///
     /// # Examples :
     ///
@@ -119,11 +121,11 @@ impl Ipv4Subnet {
 
     pub fn is_free(&self, ip: Ipv4Addr) -> bool {
         let cnt_from_nw = u32::from(ip) - u32::from(self.network_addr);
-        self.contains(ip) & ((cnt_from_nw >= self.alloc_ptr) | (self.released.contains(&ip)))
+        self.contains(ip) & ((cnt_from_nw >= self.alloc_ptr) | (self.released.contains(&ip))) & !self.force_allocated.contains_key(&ip)
     }
 
     /// De-allocate a given [`Ipv4Addr`].
-    /// Returns an error if it does not belong to this subnet,
+    /// Returns an error if it does not belong to this `Ipv4Subnet`,
     /// or if it has not been allocated yet.
     ///
     /// # Examples: 
@@ -135,6 +137,7 @@ impl Ipv4Subnet {
     /// assert!(!subnet.free(Ipv4Addr::new(192, 168, 0, 2)).is_ok());
     /// assert!(!subnet.free(Ipv4Addr::new(192, 168, 1, 0)).is_ok());
     /// ```
+
     pub fn free(&mut self, ip: Ipv4Addr) -> Result<(), ()> {
         if !self.contains(ip) { return Err(()); };
         if self.is_free(ip) {
@@ -145,8 +148,28 @@ impl Ipv4Subnet {
         Ok(())
     }
 
+    /// Remove and de-allocate a previously introduced static
+    /// allocation.
+    ///
+    /// Returns an error if the given [`Ipv4Addr`] was
+    /// not statically allocated.
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
+    /// subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 10));
+    /// assert!(subnet.free_static_alloc(Ipv4Addr::new(192, 168, 0, 10)).is_ok());
+    /// ```
 
-    /// Allocate an [`Ipv4Addr`] in that subnet. 
+    pub fn free_static_alloc(&mut self, ip: Ipv4Addr) -> Result<(), ()> {
+        if !self.force_allocated.contains_key(&ip) { return Err(()); };
+        self.force_allocated.remove(&ip);
+
+        Ok(())
+    }
+
+    /// Allocate an [`Ipv4Addr`] in that `Ipv4Subnet`. 
     ///
     /// If any allocated IPs that were previously allocated
     /// have been freed, they are chosen first. Otherwise,
@@ -164,7 +187,6 @@ impl Ipv4Subnet {
     /// ```
 
     pub fn allocate(&mut self) -> Result<Ipv4Addr, ()> {
-
         if (self.alloc_ptr > self.count()) & self.released.is_empty() {
             return Err(());
         };
@@ -177,7 +199,27 @@ impl Ipv4Subnet {
         self.alloc_ptr += 1;
 
         Ok(Ipv4Addr::from(will_allocate))
+    }
 
+    /// Performs a static allocation on the given [`Ipv4Addr`].
+    ///
+    /// Returns an error is the given [`Ipv4Addr`] is currently
+    /// allocated.
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
+    /// subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5));
+    /// assert!(!subnet.is_free(Ipv4Addr::new(192, 168, 0, 5)));
+    /// ```
+
+    pub fn force_allocate(&mut self, ip: Ipv4Addr) -> Result<(), ()> {
+        if !self.is_free(ip) { return Err(()); }; 
+
+        self.force_allocated.insert(ip, 1); 
+
+        Ok(())
     }
 
 
@@ -193,10 +235,8 @@ mod tests {
 
     #[test]
     fn test_broadcast_addr() {
-
         let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         assert!(subnet.broadcast() == Ipv4Addr::new(192, 168, 0, 255));
-
     }
 
     #[test]
@@ -224,6 +264,8 @@ mod tests {
     fn test_subnet_is_free() {
         let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         subnet.allocate().unwrap();
+        subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).unwrap();
+        assert!(!subnet.is_free(Ipv4Addr::new(192, 168, 0 ,5)));
         assert!(!subnet.is_free(Ipv4Addr::new(192, 168, 0, 1)));
         assert!(subnet.is_free(Ipv4Addr::new(192, 168, 0, 2)));
         assert!(!subnet.is_free(Ipv4Addr::new(192, 168, 1, 0)));
@@ -239,6 +281,15 @@ mod tests {
     }
 
     #[test]
+    fn test_static_free() {
+        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+
+        subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).unwrap();
+        assert!(subnet.free_static_alloc(Ipv4Addr::new(192, 168, 0, 5)).is_ok());
+        assert!(subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).is_ok());
+    }
+
+    #[test]
     fn test_subnet_allocation() {
         let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
         let first_ip = subnet.allocate().unwrap();
@@ -248,7 +299,15 @@ mod tests {
         assert!(subnet.free(Ipv4Addr::new(192, 168, 0, 1)).is_ok());
         let last = subnet.allocate().unwrap();
         assert!(last == Ipv4Addr::new(192, 168, 0, 1));
+    }
 
+    #[test]
+    fn test_static_allocation() {
+        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+
+        subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).unwrap();
+        assert!(!subnet.is_free(Ipv4Addr::new(192, 168, 0 ,5)));
+        assert!(!subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).is_ok());
     }
 
 }

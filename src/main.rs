@@ -6,6 +6,7 @@ use packet::dhcp_packet::DhcpV4Packet;
 mod packet;
 mod leases;
 mod netutils;
+mod allocators;
 
 fn main() {
 
