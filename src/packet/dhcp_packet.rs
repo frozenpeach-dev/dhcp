@@ -8,7 +8,7 @@ use crate::netutils::hw_addr::HardwareAddress;
 
 use super::dhcp_options::DhcpOptions;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DhcpV4Packet {
     pub op: u8,
     pub htype : u8,
@@ -27,6 +27,7 @@ pub struct DhcpV4Packet {
     pub options : DhcpOptions
 }
 
+#[derive(Clone)]
 pub enum DhcpMessage {
     DhcpDiscover(DhcpV4Packet),
     DhcpRequest(DhcpV4Packet),

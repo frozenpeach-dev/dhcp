@@ -2,6 +2,7 @@ use std::net::Ipv4Addr;
 
 use crate::{packet::{dhcp_options::DhcpOptions, dhcp_packet::DhcpMessage}};
 
+#[derive(Debug)]
 pub struct AllocationDraft {
     ip_addr: Ipv4Addr,
     options: DhcpOptions,
@@ -23,7 +24,7 @@ impl AllocationDraft {
     }
 }
 
-pub trait Allocator<'a> {
-    fn allocate(&'a mut self, request: DhcpMessage) -> Option<AllocationDraft>;
+pub trait Allocator {
+    fn allocate(&mut self, request: DhcpMessage) -> Option<AllocationDraft>;
     fn seal_allocation(&mut self, draft: AllocationDraft) -> Result<(), ()>;
 }

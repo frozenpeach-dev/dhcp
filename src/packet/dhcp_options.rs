@@ -4,7 +4,7 @@ use byteorder::{BigEndian, ByteOrder};
 use log::trace;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DhcpOptions {
     
     subnet_mask: Option<Ipv4Addr>,
@@ -263,12 +263,15 @@ impl From<&[u8]> for DhcpOptions {
         let mut options = DhcpOptions::new();
 
         while !data.is_empty() {
-            let _opt_code = data.remove(0); 
+            let opt_code = data.remove(0); 
+            if opt_code == 0 || opt_code == 255 {
+                continue;
+            }
             let len = data.remove(0) as usize;
             if data.len() < len{
                 break;
             }
-            match _opt_code {
+            match opt_code {
                 1 => {
                     if data.len() < 4 {
                         trace!("Invalid DHCP packet");
@@ -372,7 +375,7 @@ impl From<&[u8]> for DhcpOptions {
                     options.set_client_identifier(Some(client_id));
                 }
 
-                _ => { continue; } 
+                _ => { data.drain(..len); } 
             }
         }
         options

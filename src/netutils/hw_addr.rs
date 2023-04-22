@@ -1,6 +1,6 @@
 use mac_address::MacAddress;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct HardwareAddress {
      pub address : MacAddress,
      pub is_mac_address: bool,

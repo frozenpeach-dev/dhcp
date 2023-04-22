@@ -94,6 +94,10 @@ impl SubnetV4Map {
         self.subnets.insert(CidrSubnet::new(u32::from(subnet.borrow().network()), subnet.borrow().prefix()), subnet.clone());
     }
 
+    pub fn get_subnet(&self, subnet: CidrSubnet) -> Option<&Rc<RefCell<Ipv4Subnet>>>{
+        self.subnets.get(&subnet)
+    }
+
     pub fn get_matching_subnet(
         &self,
         ip: Ipv4Addr
@@ -168,7 +172,6 @@ mod tests {
             for i in 0..=255 {
                 let first_byte: u8 = rand::random();
                 let last_byte: u8 = rand::random();
-                dbg!(first_byte);
                 assert!(map.get_matching_subnet(Ipv4Addr::new(192, i, first_byte, last_byte)).unwrap().borrow().network() == Ipv4Addr::new(192, i, first_byte, 0));
                 
             }
