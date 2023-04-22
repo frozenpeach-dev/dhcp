@@ -10,21 +10,29 @@ use super::dhcp_options::DhcpOptions;
 
 #[derive(Clone)]
 pub struct DhcpV4Packet {
-    op: u8,
-    htype : u8,
-    hlen : u8,
-    hops : u8,
-    xid : u32,
-    secs : NaiveTime,
-    flags : [u8; 2],
-    ciaddr : Ipv4Addr,
-    yiaddr : Ipv4Addr,
-    siaddr : Ipv4Addr,
-    giaddr : Ipv4Addr,
-    chadd : HardwareAddress,
-    sname : [u8; 64],
-    file : [u8; 128],
-    options : DhcpOptions
+    pub op: u8,
+    pub htype : u8,
+    pub hlen : u8,
+    pub hops : u8,
+    pub xid : u32,
+    pub secs : NaiveTime,
+    pub flags : [u8; 2],
+    pub ciaddr : Ipv4Addr,
+    pub yiaddr : Ipv4Addr,
+    pub siaddr : Ipv4Addr,
+    pub giaddr : Ipv4Addr,
+    pub chadd : HardwareAddress,
+    pub sname : [u8; 64],
+    pub file : [u8; 128],
+    pub options : DhcpOptions
+}
+
+pub enum DhcpMessage {
+    DhcpDiscover(DhcpV4Packet),
+    DhcpRequest(DhcpV4Packet),
+    DhcpDecline(DhcpV4Packet),
+    DhcpRelease(DhcpV4Packet),
+    DhcpInform(DhcpV4Packet),
 }
 
 impl PacketType for DhcpV4Packet {
@@ -66,7 +74,7 @@ impl PacketType for DhcpV4Packet {
         let sname: [u8; 64] = raw.drain(0..64).as_slice().try_into().unwrap();
         let file: [u8; 128] = raw.drain(0..128).as_slice().to_vec().try_into().unwrap();
         let _magic_cookie = raw.drain(0..4).as_slice().to_vec();
-        let options = DhcpOptions::from(raw); 
+        let options = DhcpOptions::from(raw.as_slice()); 
         Self { op, htype, hlen, hops, xid, secs, flags, ciaddr, yiaddr, siaddr, giaddr, chadd, sname, file, options }
 
     }
