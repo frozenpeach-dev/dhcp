@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::Ipv4Addr, cell::RefCell, rc::Rc};
+use std::{net::Ipv4Addr, cell::RefCell, rc::Rc};
 
 use log::trace;
 
@@ -120,7 +120,7 @@ mod tests {
     ];
 
     #[test]
-    fn test_client_subnet() {
+    fn test_simple_allocation() {
    
         let subnet = Rc::new(RefCell::new(Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24)));
         let mut allocator = DynamicAllocator::new();

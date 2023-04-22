@@ -23,7 +23,163 @@ pub struct DhcpOptions {
     renewal_time: Option<u32>,
     rebinding_time: Option<u32>,
     client_identifier: Option<Vec<u8>>,
+    interface_mtu: Option<u16>,
+    ntp_servers: Option<Vec<Ipv4Addr>>,
+    wpad: Option<String>
+    
 
+}
+
+fn _parse_string_type(bytes: &[u8]) -> Option<String> {
+    Some(String::from_utf8(bytes.to_vec())
+        .unwrap_or_default())
+}
+
+fn _parse_ipv4_type(bytes: &[u8]) -> Option<Ipv4Addr> {
+    if bytes.len() < 4 {
+        trace!("Invalid IPv4 address");
+        return None;
+    }
+    Some(
+        Ipv4Addr::from(
+            BigEndian::read_u32(&bytes[..4])
+        )
+    )
+}
+
+fn _parse_ipv4_list_type(bytes: &[u8]) -> Option<Vec<Ipv4Addr>> {
+    let mut ip_list = Vec::new();
+
+    while !bytes.is_empty() {
+        if bytes.len() < 4 {
+            break;
+        } 
+        let ip_bytes = bytes.get(..4).unwrap();
+        let ip = Ipv4Addr::from(BigEndian::read_u32(ip_bytes));
+        ip_list.push(ip);
+    }
+
+    Some(ip_list)
+}
+
+impl From<&[u8]> for DhcpOptions {
+    fn from(
+        value: &[u8]
+    ) -> Self {
+        let mut data = value.to_vec();
+        let mut options = DhcpOptions::new();
+
+        while !data.is_empty() {
+            let opt_code = data.remove(0); 
+            if opt_code == 0 || opt_code == 255 {
+                continue;
+            }
+            let len = data.remove(0) as usize;
+            if data.len() < len{
+                break;
+            }
+            match opt_code {
+                1 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_subnet_mask(
+                        _parse_ipv4_type(&raw_bytes)
+                    );
+                },
+                4 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_time_server(
+                        _parse_ipv4_list_type(&raw_bytes)
+                    );
+                },
+                5 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_name_server(
+                        _parse_ipv4_list_type(&raw_bytes)
+                    );
+                },
+                12 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_hostname(
+                        _parse_string_type(&raw_bytes)
+                    );
+                }
+                15 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_domain_name(
+                        _parse_string_type(&raw_bytes)
+                    );
+                }
+                26 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_interface_mtu(
+                        Some(BigEndian::read_u16(&raw_bytes))
+                    );
+                }
+                28 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_broadcast_addr(
+                        _parse_ipv4_type(&raw_bytes)
+                    );
+                }
+                42 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_time_server(
+                        _parse_ipv4_list_type(&raw_bytes)
+                    );
+                }
+                50 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_requested_ip(
+                        _parse_ipv4_type(&raw_bytes)
+                    );
+                }
+                51 => {
+                    let requested_lease_time = data.drain(..len).as_slice().to_owned();
+                    options.set_lease_time(Some(BigEndian::read_u32(requested_lease_time.as_slice())));
+                }
+                53 => {
+                    let dhcp_code: u8 = data.first().unwrap().to_owned();
+                    data.remove(0);
+                    if dhcp_code > 9 {
+                        trace!("Invalid DHCP Message type");
+                        break;
+                    }
+                    options.set_message_type(Some(dhcp_code));
+                }
+                54 => {
+                    let server_identifier = data.drain(..len).as_slice().to_owned();
+                    options.set_server_identifier(Some(BigEndian::read_u32(server_identifier.as_slice())));
+                }
+                55 => {
+                    let requested_codes: Vec<u8> = data.drain(..len).collect();
+                    requested_codes.iter().map(|code| {
+                        options.add_parameter_request(*code);
+                    }).last();
+                }
+                58 => {
+                    let renewal_time_value = data.drain(..len).as_slice().to_owned();
+                    options.set_renewal_time(Some(BigEndian::read_u32(renewal_time_value.as_slice())));
+                }
+                59 => {
+                    let rebinding_time = data.drain(..len).as_slice().to_owned();
+                    options.set_rebinding_time(Some(BigEndian::read_u32(rebinding_time.as_slice())));
+                }
+                61 => {
+                    let client_id: Vec<u8> = data.drain(..len).collect();
+                    options.set_client_identifier(Some(client_id));
+                }
+                252 => {
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_wpad(
+                        _parse_string_type(&raw_bytes)
+                    );
+                }
+
+                _ => { data.drain(..len); } 
+            }
+        }
+        options
+    }
 }
 
 impl DhcpOptions {
@@ -43,7 +199,10 @@ impl DhcpOptions {
             parameter_request: None,
             renewal_time: None,
             rebinding_time: None, 
-            client_identifier: None 
+            client_identifier: None,
+            interface_mtu: None,
+            ntp_servers: None,
+            wpad: None,
         } 
     }
 
@@ -195,7 +354,8 @@ impl DhcpOptions {
     }
 
     pub fn add_parameter_request(
-        &mut self, parameter_request: u8
+        &mut self,
+        parameter_request: u8
     ) {
         match &mut self.parameter_request {
             Some(list) => list.push(parameter_request),
@@ -212,7 +372,8 @@ impl DhcpOptions {
     }
 
     pub fn set_renewal_time(
-        &mut self, renewal_time: Option<u32>
+        &mut self, 
+        renewal_time: Option<u32>
     ) {
         self.renewal_time = renewal_time;
     }
@@ -253,132 +414,58 @@ impl DhcpOptions {
     ) {
         self.log_server = log_server;
     }
-}
 
-impl From<&[u8]> for DhcpOptions {
-    fn from(
-        value: &[u8]
-    ) -> Self {
-        let mut data = value.to_vec();
-        let mut options = DhcpOptions::new();
+    pub fn wpad(
+        &self
+    ) -> Option<&String> {
+        self.wpad.as_ref()
+    }
 
-        while !data.is_empty() {
-            let opt_code = data.remove(0); 
-            if opt_code == 0 || opt_code == 255 {
-                continue;
-            }
-            let len = data.remove(0) as usize;
-            if data.len() < len{
-                break;
-            }
-            match opt_code {
-                1 => {
-                    if data.len() < 4 {
-                        trace!("Invalid DHCP packet");
-                        break;
-                    }
-                    let ip_bytes = BigEndian::read_u32(data.drain(..4).as_slice());
-                    options.set_subnet_mask(Some(Ipv4Addr::from(ip_bytes))); 
-                },
-                4 => {
-                    let mut raw_bytes: Vec<u8> = data.drain(..len).collect();
+    pub fn set_wpad(
+        &mut self, wpad: 
+        Option<String>
+    ) {
+        self.wpad = wpad;
+    }
 
-                    while !raw_bytes.is_empty() {
-                        if raw_bytes.len() < 4 {
-                            break;
-                        } 
-                        let timeserv_ip_bytes = raw_bytes.drain(..4).as_slice().to_owned();
-                        let timeserv_ip = Ipv4Addr::from(BigEndian::read_u32(timeserv_ip_bytes.as_slice()));
-                        options.add_time_server(timeserv_ip);
-                    }
-                },
-                5 => {
-                    let mut raw_bytes: Vec<u8> = data.drain(..len).collect();
+    pub fn set_name_server(
+        &mut self,
+        name_server: Option<Vec<Ipv4Addr>>
+    ) {
+        self.name_server = name_server;
+    }
 
-                    while !raw_bytes.is_empty() {
-                        if raw_bytes.len() < 4 {
-                            break;
-                        } 
-                        // sus double as_slice
-                        let nameserver_ip_bytes = raw_bytes.drain(..4).as_slice().to_owned();
-                        let nameserver_ip = Ipv4Addr::from(BigEndian::read_u32(nameserver_ip_bytes.as_slice()));
-                        options.add_name_server(nameserver_ip);
-                    }
-                },
-                12 => {
-                    
-                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+    pub fn set_time_server(
+        &mut self,
+        time_server: Option<Vec<Ipv4Addr>>
+    ) {
+        self.time_server = time_server;
+    }
 
-                    options.set_hostname(
-                        Some(
-                            String::from_utf8(raw_bytes)
-                                .unwrap_or_default()
-                        )
-                    );
+    pub fn interface_mtu(
+        &self
+    ) -> Option<u16> {
+        self.interface_mtu
+    }
 
-                }
-                15 => {
-                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+    pub fn set_interface_mtu(
+        &mut self, 
+        interface_mtu: Option<u16>
+    ) {
+        self.interface_mtu = interface_mtu;
+    }
 
-                    options.set_domain_name(
-                        Some(
-                            String::from_utf8(raw_bytes)
-                                .unwrap_or_default()
-                        )
-                    );
-                }
-                28 => {
-                    let broadcast_ip_bytes = data.drain(..len).as_slice().to_owned();
-                    let broadcast_ip = Ipv4Addr::from(BigEndian::read_u32(broadcast_ip_bytes.as_slice()));
+    pub fn ntp_servers(
+        &self
+    ) -> Option<&Vec<Ipv4Addr>> {
+        self.ntp_servers.as_ref()
+    }
 
-                    options.set_broadcast_addr(Some(broadcast_ip));
-                }
-                50 => {
-                    let requested_ip_bytes = data.drain(..len).as_slice().to_owned();
-                    let requested_ip = Ipv4Addr::from(BigEndian::read_u32(requested_ip_bytes.as_slice()));
-                    
-                    options.set_requested_ip(Some(requested_ip));
-                }
-                51 => {
-                    let requested_lease_time = data.drain(..len).as_slice().to_owned();
-                    options.set_lease_time(Some(BigEndian::read_u32(requested_lease_time.as_slice())));
-                }
-                53 => {
-                    let dhcp_code: u8 = data.first().unwrap().to_owned();
-                    data.remove(0);
-                    if dhcp_code > 9 {
-                        trace!("Invalid DHCP Message type");
-                        break;
-                    }
-                    options.set_message_type(Some(dhcp_code));
-                }
-                54 => {
-                    let server_identifier = data.drain(..len).as_slice().to_owned();
-                    options.set_server_identifier(Some(BigEndian::read_u32(server_identifier.as_slice())));
-                }
-                55 => {
-                    let requested_codes: Vec<u8> = data.drain(..len).collect();
-                    requested_codes.iter().map(|code| {
-                        options.add_parameter_request(*code);
-                    }).last();
-                }
-                58 => {
-                    let renewal_time_value = data.drain(..len).as_slice().to_owned();
-                    options.set_renewal_time(Some(BigEndian::read_u32(renewal_time_value.as_slice())));
-                }
-                59 => {
-                    let rebinding_time = data.drain(..len).as_slice().to_owned();
-                    options.set_rebinding_time(Some(BigEndian::read_u32(rebinding_time.as_slice())));
-                }
-                61 => {
-                    let client_id: Vec<u8> = data.drain(..len).collect();
-                    options.set_client_identifier(Some(client_id));
-                }
-
-                _ => { data.drain(..len); } 
-            }
-        }
-        options
+    pub fn set_ntp_servers(
+        &mut self,
+        ntp_servers: Option<Vec<Ipv4Addr>>
+    ) {
+        self.ntp_servers = ntp_servers;
     }
 }
 

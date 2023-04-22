@@ -26,7 +26,6 @@ impl Allocator for StaticAllocator {
             _ => { return None; },
         };
 
-
         // The following lines are an absurdity. Client identifier is by no mean of fixed length,
         // nor always correspond to a so called HardwareAddress. 
         //
