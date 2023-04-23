@@ -10,6 +10,7 @@ use std::{net::Ipv4Addr, collections::{VecDeque, HashSet}};
 use byteorder::{BigEndian, ByteOrder};
 use log::trace;
 use serde::{Serialize, Deserialize};
+use serde_with::skip_serializing_none;
 
 /// `DhcpOptions` is used as an abstraction
 /// of the available set of options used by DHCP requests,
@@ -61,6 +62,7 @@ use serde::{Serialize, Deserialize};
 /// ```
 /// options.set_hostname(String::from("My PC"));
 /// ```
+#[skip_serializing_none]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DhcpOptions {
 
@@ -280,10 +282,10 @@ fn _format_ipv4(addr: Ipv4Addr) -> [u8; 4] {
     )
 }
 
-fn _format_ipv4_list(addrs: &Vec<Ipv4Addr>) -> Vec<u8> {
+fn _format_ipv4_list(addrs: &[Ipv4Addr]) -> Vec<u8> {
 
     let mut buf = Vec::new();
-    addrs.into_iter().map(|x| {
+    addrs.iter().map(|x| {
         buf.extend_from_slice(
             &_format_ipv4(*x)
         );
@@ -718,7 +720,6 @@ mod tests {
     #[test]
     fn options_from_bytes() {
         let options = DhcpOptions::from(OPTION_BYTES.as_slice());
-        dbg!(options.clone());
         assert!(options.message_type().unwrap() == 5);
         assert!(options.subnet_mask().unwrap() == Ipv4Addr::new(255, 255, 255, 0));
         assert!(options.defined_options.contains(&53));
