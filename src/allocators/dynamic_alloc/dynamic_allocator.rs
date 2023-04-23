@@ -2,7 +2,7 @@ use std::{net::Ipv4Addr, cell::RefCell, rc::Rc};
 
 use log::trace;
 
-use crate::{leases::ip_subnet::Ipv4Subnet, allocators::{allocator::{Allocator, AllocationDraft}, subnet_map::SubnetV4Map}, packet::{dhcp_packet::{DhcpMessage, DhcpV4Packet} }};
+use crate::{leases::ip_subnet::Ipv4Subnet, allocators::{allocator::{Allocator, AllocationDraft}, subnet_map::SubnetV4Map}, packet::dhcp_packet::{DhcpMessage, DhcpV4Packet} };
 
 
 struct DynamicAllocator {
@@ -12,6 +12,29 @@ struct DynamicAllocator {
 }
 
 impl Allocator for DynamicAllocator {
+    
+    /// Dynamically allocates an [`Ipv4Addr`] upon
+    /// handling a `DhcpDiscover` request.
+    ///
+    /// If the `requested_ip` field in the [`DhcpOptions`]
+    /// associated to the message is field, it first tries
+    /// to allocate that IP. 
+    ///
+    /// In case of failure, it then tries to allocate a
+    /// random [`Ipv4Addr`] in the client's subnet.
+    ///
+    /// Returns an [`AllocationDraft`] if it successfully
+    /// managed to reserve an address.
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// let subnet = Rc::new(RefCell::new(Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24)));
+    /// let mut allocator = DynamicAllocator::new();
+    /// allocator.register_subnet(subnet.clone());
+    /// let draft = allocator.allocate(dhcp_msg);
+    /// ```
+
     fn allocate(
         & mut self,
         msg: DhcpMessage
