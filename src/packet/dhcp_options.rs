@@ -64,7 +64,9 @@ use serde::{Serialize, Deserialize};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DhcpOptions {
 
+    #[serde(skip)]
     output_order: Option<VecDeque<u8>>,
+    #[serde(skip)]
     defined_options: HashSet<u8>,
     subnet_mask: Option<Ipv4Addr>,
     router_option: Option<Vec<Ipv4Addr>>,
