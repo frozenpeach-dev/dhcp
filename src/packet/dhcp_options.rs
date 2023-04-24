@@ -77,7 +77,7 @@ pub struct DhcpOptions {
     requested_ip: Option<Ipv4Addr>,
     lease_time: Option<u32>,
     message_type: Option<u8>,
-    server_identifier: Option<u32>,
+    server_identifier: Option<Ipv4Addr>,
     parameter_request: Option<Vec<u8>>,
     renewal_time: Option<u32>,
     rebinding_time: Option<u32>,
@@ -206,8 +206,10 @@ impl From<&[u8]> for DhcpOptions {
                     options.set_message_type(Some(dhcp_code));
                 }
                 54 => {
-                    let server_identifier = data.drain(..len).as_slice().to_owned();
-                    options.set_server_identifier(Some(BigEndian::read_u32(server_identifier.as_slice())));
+                    let raw_bytes: Vec<u8> = data.drain(..len).collect();
+                    options.set_server_identifier(
+                        _parse_ipv4_type(&raw_bytes)
+                    );
                 }
                 55 => {
                     let requested_codes: Vec<u8> = data.drain(..len).collect();
@@ -327,7 +329,7 @@ fn _append_option(option_code: u8, options: &DhcpOptions, buffer: &mut Vec<u8>) 
         }
         28 => {
             let bytes = _format_ipv4(options.broadcast_addr().unwrap()); 
-            buffer.push(2);
+            buffer.push(4);
             buffer.extend_from_slice(&bytes);
         }
         42 => {
@@ -337,7 +339,7 @@ fn _append_option(option_code: u8, options: &DhcpOptions, buffer: &mut Vec<u8>) 
         }
         50 => {
             let bytes = _format_ipv4(options.requested_ip().unwrap()); 
-            buffer.push(2);
+            buffer.push(4);
             buffer.extend_from_slice(&bytes);
         }
         51 => {
@@ -350,7 +352,7 @@ fn _append_option(option_code: u8, options: &DhcpOptions, buffer: &mut Vec<u8>) 
             buffer.push(options.message_type().unwrap());
         }
         54 => {
-            let bytes = u32::to_be_bytes(options.server_identifier().unwrap());
+            let bytes = _format_ipv4(options.server_identifier().unwrap()); 
             buffer.push(4);
             buffer.extend_from_slice(&bytes);
         }
@@ -556,13 +558,13 @@ impl DhcpOptions {
 
     pub fn server_identifier(
         &self
-    ) -> Option<u32> {
+    ) -> Option<Ipv4Addr> {
         self.server_identifier
     }
 
     pub fn set_server_identifier(
         &mut self, 
-        server_identifier: Option<u32>
+        server_identifier: Option<Ipv4Addr>
     ) {
         self.defined_options.insert(54);
         self.server_identifier = server_identifier;
