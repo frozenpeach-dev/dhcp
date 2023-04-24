@@ -380,7 +380,7 @@ fn _append_option(option_code: u8, options: &DhcpOptions, buffer: &mut Vec<u8>) 
             buffer.extend_from_slice(bytes);
         }
         _ => ()
-    } 
+    }
 
 }
 
