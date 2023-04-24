@@ -33,9 +33,9 @@ pub struct SubnetCfg {
 }
 
 
-pub fn load_subnet_cfg() -> Result<SubnetCfg, std::io::Error> {
+pub fn load_subnet_cfg(path: &str) -> Result<SubnetCfg, std::io::Error> {
 
-    let cfg = fs::read_to_string("config/subnets.yml")
+    let cfg = fs::read_to_string(path)
         .expect("Fatal: failed to load subnets config file");
     serde_yaml::from_str(&cfg).map_err(|err| {
         let error = format!("Fatal: failed to load subnets config file \n 
@@ -45,7 +45,7 @@ pub fn load_subnet_cfg() -> Result<SubnetCfg, std::io::Error> {
     }) 
 }
 
-pub fn save_subnet_cfg(cfg: SubnetCfg) {
+pub fn save_subnet_cfg(path: &str, cfg: SubnetCfg) {
 
     let data = serde_yaml::to_string(&cfg).map_err(|err| {
         let error = format!("Fatal: failed to load subnets config file \n 
@@ -53,7 +53,7 @@ pub fn save_subnet_cfg(cfg: SubnetCfg) {
                 YAML file: {}", err);
         error!("{}", error);
     }).unwrap_or_default();
-    fs::write("config/subnets.yml", data)
+    fs::write(path, data)
         .map_err(|err| {
             let error = format!("Fatal: failed to write subnets config file \n
                 Encountered the following error while trying to write:
@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn test_load_subnet_cfg() {
-        let subnets = load_subnet_cfg();
+        let subnets = load_subnet_cfg("tests/subnets.yml");
         let subnet = subnets.unwrap()
             .subnets
             .pop().unwrap();
