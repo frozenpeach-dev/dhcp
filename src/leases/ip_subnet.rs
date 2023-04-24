@@ -1,5 +1,6 @@
 use std::{net::Ipv4Addr, collections::HashMap};
 
+use crate::packet::dhcp_options::DhcpOptions;
 
 
 /// `Ipv4Subnet` provides an abstraction layer over 
@@ -11,7 +12,7 @@ pub struct Ipv4Subnet {
     released: Vec<Ipv4Addr>,
     force_allocated: HashMap<Ipv4Addr, usize>,
     prefix: u8,
-
+    options: DhcpOptions,
 
 }
 
@@ -27,7 +28,7 @@ impl Ipv4Subnet {
     /// ```
 
     pub fn new(network_addr: Ipv4Addr, prefix: u8) -> Self {
-        Self { network_addr, alloc_ptr: 1, released: Vec::new(), force_allocated: HashMap::new(), prefix }
+        Self { network_addr, alloc_ptr: 1, released: Vec::new(), force_allocated: HashMap::new(), prefix, options: DhcpOptions::new()}
     }
 
     /// Returns the network address corresponding to the
@@ -226,6 +227,10 @@ impl Ipv4Subnet {
 
     pub fn prefix(&self) -> u8 {
         self.prefix
+    }
+
+    pub fn options(&self) -> &DhcpOptions {
+        &self.options
     }
 }
 

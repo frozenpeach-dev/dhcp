@@ -1,6 +1,6 @@
 use mac_address::MacAddress;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 
 pub struct HardwareAddress {
      pub address : MacAddress,
@@ -17,7 +17,7 @@ impl HardwareAddress {
     pub fn new(mut raw : [u8; 16]) -> Self{
         let mut i =0;
         raw.reverse();
-        while (raw.get(i).unwrap().to_owned() == 0) && (i < 9) {
+        while (*raw.get(i).unwrap() == 0) && (i < 9) {
             i+=1
         }
         raw.reverse();
