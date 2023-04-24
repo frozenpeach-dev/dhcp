@@ -1,1 +1,3 @@
-pub mod static_allocator;
+pub mod static_alloc;
+pub mod allocator;
+

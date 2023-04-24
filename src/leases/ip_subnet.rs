@@ -1,6 +1,5 @@
 use std::{net::Ipv4Addr, collections::HashMap};
 
-use crate::packet::dhcp_options::{DhcpOptions, DhcpOption};
 
 
 /// `Ipv4Subnet` provides an abstraction layer over 
@@ -12,7 +11,7 @@ pub struct Ipv4Subnet {
     released: Vec<Ipv4Addr>,
     force_allocated: HashMap<Ipv4Addr, usize>,
     prefix: u8,
-    options: DhcpOptions,
+
 
 }
 
@@ -21,11 +20,6 @@ impl Ipv4Subnet {
     /// Creates a new `Ipv4Subnet` from a given
     /// network address and a CIDR prefix (0-32)
     ///
-    /// The given [`Ipv4Addr`] does not have to be a
-    /// matching network address, any ip can be used 
-    /// and the corresponding subnet will be
-    /// created accordingly.
-    ///
     /// # Examples:
     ///
     /// ```
@@ -33,10 +27,7 @@ impl Ipv4Subnet {
     /// ```
 
     pub fn new(network_addr: Ipv4Addr, prefix: u8) -> Self {
-        let mut subnet_mask: u32 = (2 << prefix - 1) - 1;
-        subnet_mask = subnet_mask.to_be();
-        let network_addr = u32::from(network_addr) & subnet_mask;
-        Self { network_addr: Ipv4Addr::from(network_addr), alloc_ptr: 1, released: Vec::new(), force_allocated: HashMap::new(), prefix, options: DhcpOptions::new() }
+        Self { network_addr, alloc_ptr: 1, released: Vec::new(), force_allocated: HashMap::new(), prefix }
     }
 
     /// Returns the network address corresponding to the
@@ -233,32 +224,8 @@ impl Ipv4Subnet {
         Ok(())
     }
 
-    /// Returns the CIDR prefix corresponding to 
-    /// this `Ipv4Subnet`
-    ///
-    /// # Examples:
-    ///
-    /// ```
-    /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
-    /// assert!(subnet.prefix() == 24);
-    /// ```
-
     pub fn prefix(&self) -> u8 {
         self.prefix
-    }
-
-    /// Returns the [`DhcpOptions`] associated to 
-    /// this `Ipv4Subnet`
-    
-    pub fn options(&self) -> &DhcpOptions {
-        &self.options
-    }
-
-    /// Add a new [`DhcpOption`] associated
-    /// to this `Ipv4Subnet`
-
-    pub fn add_option(&mut self, option: DhcpOption) {
-        self.options.add(option);
     }
 }
 
@@ -272,7 +239,6 @@ mod tests {
     #[test]
     fn test_broadcast_addr() {
         let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
-        dbg!(subnet.network());
         assert!(subnet.broadcast() == Ipv4Addr::new(192, 168, 0, 255));
     }
 

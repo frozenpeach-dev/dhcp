@@ -269,6 +269,7 @@ pub struct DhcpOptions {
 }
 
 impl DhcpOptions {
+    pub fn new() -> Self { Self { options: HashMap::new() } }
 
     pub fn count(&self) -> u8 {
         self.options.len() as u8
