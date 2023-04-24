@@ -183,7 +183,7 @@ mod tests {
             HardwareAddress::broadcast(),
             String::from("test_lease"),
         ).unwrap();
-
+        
         assert!(lease.remaining() < Duration::hours(8));
         lease.extend(Duration::hours(2)).unwrap();
         assert!(lease.remaining() > Duration::hours(9));

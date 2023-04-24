@@ -1,6 +1,7 @@
 use std::{net::Ipv4Addr, collections::HashMap};
 
 
+
 /// `Ipv4Subnet` provides an abstraction layer over 
 /// IP v4 subnets, to help manage such subnets.
 pub struct Ipv4Subnet {
@@ -10,6 +11,7 @@ pub struct Ipv4Subnet {
     released: Vec<Ipv4Addr>,
     force_allocated: HashMap<Ipv4Addr, usize>,
     prefix: u8,
+
 
 }
 
