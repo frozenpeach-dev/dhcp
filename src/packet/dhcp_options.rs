@@ -63,7 +63,7 @@ use serde_with::skip_serializing_none;
 /// options.set_hostname(String::from("My PC"));
 /// ```
 #[skip_serializing_none]
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct DhcpOptions {
 
     #[serde(skip)]

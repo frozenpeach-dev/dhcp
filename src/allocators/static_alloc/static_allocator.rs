@@ -150,6 +150,7 @@ mod tests {
         static_allocator.register_static_allocation(
             StaticAllocation::new(
                 HardwareAddress::broadcast(), 
+                Ipv4Addr::new(192, 168, 0, 3),
                 options
         )).unwrap();
 
@@ -167,6 +168,7 @@ mod tests {
         static_allocator.register_static_allocation(
             StaticAllocation::new(
                 HardwareAddress::broadcast(), 
+                Ipv4Addr::new(192, 168, 0, 3),
                 options
         )).unwrap();
 
@@ -185,6 +187,7 @@ mod tests {
         static_allocator.register_static_allocation(
             StaticAllocation::new(
                 HardwareAddress::broadcast(), 
+                Ipv4Addr::new(192, 168, 0, 3),
                 options
         )).unwrap();
 
@@ -209,6 +212,7 @@ mod tests {
         static_allocator.register_static_allocation(
             StaticAllocation::new(
                 HardwareAddress::broadcast(), 
+                Ipv4Addr::new(192, 168, 0, 3),
                 options
         )).unwrap();
 

@@ -1,16 +1,35 @@
-use std::fs;
+use std::{fs, net::Ipv4Addr};
 
 use log::error;
 use serde::{Serialize, Deserialize};
 
 
-use crate::{leases::ip_subnet::Ipv4Subnet, packet::dhcp_options::DhcpOptions};
+use crate::{leases::ip_subnet::Ipv4Subnet, packet::dhcp_options::DhcpOptions, netutils::hw_addr::HardwareAddress};
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct StaticAllocs{ 
+    #[serde(skip)]
+    pub only_static: bool, 
+    pub allocations: Vec<AllocCfg> 
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AllocCfg {
+    
+    pub ip_addr: Ipv4Addr, 
+    pub hw_addr: String,
+    #[serde(skip)]
+    pub options: DhcpOptions
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Ipv4SubnetCfg(Ipv4Subnet, StaticAllocs);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SubnetCfg {
     #[serde(rename = "defaults")]
-    default_options: DhcpOptions,
-    subnets: Vec<Ipv4Subnet>
+    pub default_options: DhcpOptions,
+    pub subnets: Vec<Ipv4SubnetCfg>
 }
 
 
@@ -57,8 +76,8 @@ mod tests {
             .subnets
             .pop().unwrap();
 
-        assert!(subnet.network() == Ipv4Addr::new(192, 168, 0, 0));
-        assert!(subnet.prefix() == 24);
+        assert!(subnet.0.network() == Ipv4Addr::new(192, 168, 0, 0));
+        assert!(subnet.0.prefix() == 24);
     }
 
 }
