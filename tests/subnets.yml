@@ -1,0 +1,12 @@
+defaults:
+  hostname: "Apple"
+
+subnets:
+  - - network_addr: 192.168.0.0
+      prefix: 24
+      options:
+        hostname: "Samsung"
+        domain_name: "Test"
+    - allocations:
+        - hw_addr: d5:ef:03:45:3c:0f
+          ip_addr: 192.168.0.3

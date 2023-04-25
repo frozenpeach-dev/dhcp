@@ -17,3 +17,5 @@ lazy_static = "1.4.0"
 rand = "0.8.5"
 serde = { version = "1.0.160", features = ["derive"] }
 serde_yaml = "0.9.21"
+pnet = "0.33.0" 
+serde_with = "2.3.2"

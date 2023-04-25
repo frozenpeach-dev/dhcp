@@ -6,6 +6,7 @@ mod leases;
 mod netutils;
 mod allocators;
 mod hooks;
+mod cfg;
 
 fn main() {
 
