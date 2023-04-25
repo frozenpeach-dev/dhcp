@@ -5,6 +5,7 @@ mod packet;
 mod leases;
 mod netutils;
 mod allocators;
+mod cfg;
 
 fn main() {
 
