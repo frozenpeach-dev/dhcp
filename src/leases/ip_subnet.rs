@@ -1,15 +1,21 @@
 use std::{net::Ipv4Addr, collections::HashMap};
 
+use serde::{Serialize, Deserialize};
+
 use crate::packet::dhcp_options::DhcpOptions;
 
 
 /// `Ipv4Subnet` provides an abstraction layer over 
 /// IP v4 subnets, to help manage such subnets.
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Ipv4Subnet {
 
     network_addr: Ipv4Addr,
+    #[serde(skip)]
     alloc_ptr: u32,
+    #[serde(skip)]
     released: Vec<Ipv4Addr>,
+    #[serde(skip)]
     force_allocated: HashMap<Ipv4Addr, usize>,
     prefix: u8,
     options: DhcpOptions,
@@ -264,7 +270,6 @@ mod tests {
     fn test_allocated_count() {
         let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         subnet.allocate().unwrap();
-        dbg!(subnet.allocated_count());
         assert!(subnet.allocated_count() == 1);
     }
 

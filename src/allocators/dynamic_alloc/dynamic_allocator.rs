@@ -91,7 +91,7 @@ impl DynamicAllocator {
                     .get_matching_subnet(req_ip)
                     .or_else(|| {
                         trace!("DHCP Message received from an unknown subnet.");
-                        return None;
+                        None
                 });                   
             };
             return None;
