@@ -5,6 +5,7 @@ use crate::packet::dhcp_options::DhcpOptions;
 
 /// `Ipv4Subnet` provides an abstraction layer over 
 /// IP v4 subnets, to help manage such subnets.
+#[derive(Clone)]
 pub struct Ipv4Subnet {
 
     network_addr: Ipv4Addr,
