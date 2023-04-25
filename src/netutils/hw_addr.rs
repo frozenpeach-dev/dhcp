@@ -1,12 +1,12 @@
 use mac_address::MacAddress;
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub struct HardwareAddress {
-     pub address : MacAddress,
-     pub is_mac_address: bool,
-     pub raw : [u8; 16]
- }
+    #[serde(skip)]
+    pub is_mac_address: bool,
+    pub raw : [u8; 16]
+}
 
 impl HardwareAddress {
     
@@ -28,7 +28,7 @@ impl HardwareAddress {
             addr = MacAddress::new(bytes);
             is_mac_address = true;
         }
-        Self { address: (addr), is_mac_address, raw: (raw) }
+        Self { is_mac_address, raw: (raw) }
 
     }
 }
