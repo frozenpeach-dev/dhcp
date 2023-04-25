@@ -125,7 +125,6 @@ impl StaticAllocator {
         subnet.free_static_alloc(Ipv4Addr::from(ip_addr))?;
         self.registry.remove(&alloc.cid());
         Ok(())
-
     }
 
 }

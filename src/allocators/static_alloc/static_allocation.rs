@@ -1,5 +1,4 @@
 use std::net::Ipv4Addr;
-
 use crate::{packet::dhcp_options::DhcpOptions, netutils::hw_addr::HardwareAddress};
 
 
