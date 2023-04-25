@@ -42,7 +42,7 @@ impl PacketType for DhcpV4Packet {
     }
 
     fn empty() -> Self {
-        todo!()
+        DhcpV4Packet::from_raw_bytes(&[0u8; 308])
     }
 
     fn from_raw_bytes(raw : &[u8]) -> Self {

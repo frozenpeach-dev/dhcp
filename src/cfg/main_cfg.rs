@@ -9,7 +9,13 @@ pub struct DhcpCfg {
     network_cfg: NetworkCfg
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+impl DhcpCfg {
+    pub fn network_cfg(&self) -> &NetworkCfg {
+        &self.network_cfg
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NetworkCfg {
     #[serde(serialize_with = "_serialize_net_interface")]
     #[serde(deserialize_with = "_deserialize_net_interface")]
