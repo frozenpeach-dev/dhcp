@@ -14,7 +14,7 @@ fn init_transaction_manager_hook(mut registry : HookRegistry<DhcpV4Packet, DhcpV
         let result = transaction_handler.handle_input(input);
         match result {
             Err(e) => Ok(-1),
-            _ => Ok(())
+            _ => Ok(0)
         }
     });
 
@@ -24,18 +24,19 @@ fn init_transaction_manager_hook(mut registry : HookRegistry<DhcpV4Packet, DhcpV
         let output = context.get_output();
         let transaction_manager = transaction_manager.clone();
         let mut transaction_handler = transaction_manager.lock().unwrap();
-        let result = transaction_handler.handle_output(input);
+        let result = transaction_handler.handle_output(output);
         match result {
             Err(e) => Ok(-1),
-            _ => Ok(())
+            _ => Ok(0)
         }
     });
 
     let flags = vec![];
     let input_hook = Hook::new("TransactionInput".to_string(),input_handler,flags);
-    let output_hook = Hook::new("TransactionOutput".to_string(), output_handler, flags);
-    output_hook.must(input_hook);
-    registry.register_hook(fp_core::core::state::PacketState::Received, hook);
+    let flags = vec![];
+    let mut output_hook = Hook::new("TransactionOutput".to_string(), output_handler, flags);
+    output_hook.must(input_hook.id());
+    registry.register_hook(fp_core::core::state::PacketState::Received, output_hook);
     registry
     
 }
