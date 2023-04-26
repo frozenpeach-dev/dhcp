@@ -235,7 +235,7 @@ impl TransactionManager{
     }
 
     /// Handle an input packet if the packet is a DHCPREQUEST one
-    pub fn handle_discover(&mut self, packet : &DhcpV4Packet) -> Result<(),String>{
+    fn handle_discover(&mut self, packet : &DhcpV4Packet) -> Result<(),String>{
         let xid = packet.xid;
         //Abort if DHCP Discover has an xid that is already bound to a transaction
         if self.is_in(xid) {
@@ -246,7 +246,7 @@ impl TransactionManager{
     }
 
     /// Handles an input packet if the packet is a DHCPREQUEST one
-    pub fn handle_request(& mut self, packet : &DhcpV4Packet) -> Result<(), String> {
+    fn handle_request(& mut self, packet : &DhcpV4Packet) -> Result<(), String> {
         let xid = packet.xid;
         let t = self.get_transaction(xid)?;
         match packet.options.server_identifier() {
@@ -285,7 +285,7 @@ impl TransactionManager{
     }
 
     /// Handles an output packet if the packet is a DHCPACK one
-    pub fn handle_ack(&mut self, packet : &DhcpV4Packet) -> Result<(), String>{
+    fn handle_ack(&mut self, packet : &DhcpV4Packet) -> Result<(), String>{
         let xid = packet.xid;
         let t = self.get_transaction(xid)?;
         match t.state() {
@@ -296,12 +296,12 @@ impl TransactionManager{
     }
 
     /// Handles an output packet if the packet is a DHCPNACK one
-    pub fn handle_nack(&mut self, _packet : &DhcpV4Packet) -> Result<(), String>{
+    fn handle_nack(&mut self, _packet : &DhcpV4Packet) -> Result<(), String>{
         Ok(())
     }
 
     /// Handles an output packet if the packet is a DHCPOFFER one
-    pub fn handle_offer(&mut self, packet :&DhcpV4Packet) -> Result<(), String>{
+    fn handle_offer(&mut self, packet :&DhcpV4Packet) -> Result<(), String>{
         let xid = packet.xid;
         let t = self.get_transaction(xid)?;
         match t.state {
