@@ -1,4 +1,5 @@
 #![feature(test)]
+#![feature(assert_matches)]
 extern crate test;
 
 mod packet;
