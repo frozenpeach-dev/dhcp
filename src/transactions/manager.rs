@@ -100,7 +100,7 @@ impl TransactionManager{
                 // Store Transaction and register its address in Storage in index
                 let address = storage.store(Data::Transaction(transaction.clone()), TRANSACTION_POOL_NAME.to_string())?;
                 index.insert(transaction_id, address);
-                return Ok(())
+               Ok(())
             }
         }
     }
@@ -117,7 +117,7 @@ impl TransactionManager{
     /// - Moving bound [`LeaseV4`] from pending [`DataPool`] to running [`DataPool`]
     /// - Closing [`Transaction`]
     pub fn commit (&mut self, transaction_id : u32) -> Result<(), String> {
-        // We get the lease because we'll move it from PendinLeases to Leases
+        // We get the lease because we'll move it from PendingLeases to Leases
         let lease = self.get_transaction_lease(transaction_id)?;
         // Delete transaction
         self.delete_transaction(transaction_id)?;

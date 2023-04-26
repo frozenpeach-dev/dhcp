@@ -98,7 +98,7 @@ impl Storable for LeaseData {
     }
 
     fn value(&self) -> params::Params {
-        params! {"type" => "lease", "id" => self.uid,"name" =>self.hostname.to_string(), "address" => self.address.to_string(), "expiration" => self.expiration_time.to_rfc2822()}
+        params! {"type" => "lease", "id" => self.uid,"name" => self.hostname.to_string(), "address" => self.address.to_string(), "expiration" => self.expiration_time.to_rfc2822()}
     }
 }
 
@@ -120,6 +120,7 @@ impl FromRow for LeaseData {
         where
             Self: Sized {
         Ok(LeaseData::from_row(row))
+        
     }
 }
 

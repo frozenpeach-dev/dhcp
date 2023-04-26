@@ -54,7 +54,7 @@ impl PacketType for DhcpV4Packet {
         let next:[u8; 4] = raw.drain(0..4).as_slice().to_owned().try_into().unwrap();
         let xid = u32::from_le_bytes(next);
         let next: [u8; 2] = raw.drain(0..2).as_slice().to_owned().try_into().unwrap();
-        // let secs = NaiveTime::from_hms_opt(0, 0, u16::from_le_bytes(next) as u32).unwrap();
+        
         let secs = Duration::from_secs(u16::from_le_bytes(next) as u64);
         
         let flags = raw.drain(0..2).as_slice().to_owned().try_into().unwrap();
