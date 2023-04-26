@@ -149,6 +149,10 @@ impl<'a> LeaseV4<'a> {
     ) -> &Ipv4Subnet {
         self.subnet
     }
+
+    pub fn end(&self) -> DateTime<Utc>{
+        self.t_end
+    }
 }
 
 #[cfg(test)]
