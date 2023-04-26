@@ -17,7 +17,10 @@ const TRANSACTION_POOL_NAME : &str = "Transactions";
 
 
 pub struct TransactionManager {
+    // Index registers every Transaction and their address in RuntimeStorage
+    // Could maybe improve in the future by making it not a Arc Mutex
     index : Arc<Mutex<HashMap<u32, u16>>>,
+    // Shared storage
     storage : Arc<Mutex<RuntimeStorage<Data>>>
 }
 
@@ -69,9 +72,11 @@ impl TransactionManager{
     pub fn init(&self) {
         let storage = self.storage.clone();
         let storage = storage.lock().unwrap();
+        // Create DataPool
         let pending_lease_pool = DataPool::new(PENDING_LEASE_POOL_NAME.to_string(), "(type VARCHAR(255), id BIGINT, name VARCHAR(255), address VARCHAR(255), expiration VARCHAR(255))".to_string());
         let lease_pool = DataPool::new(LEASE_POOL_NAME.to_string(), "(type VARCHAR(255), id BIGINT, name VARCHAR(255), address VARCHAR(255), expiration VARCHAR(255))".to_string());
         let transaction_pool = DataPool::new(TRANSACTION_POOL_NAME.to_string(), "(type VARCHAR(255), id BIGINT, identifier BIGINT, time VARCHAR(255), lease_address BIGINT, state VARCHAR(255))".to_string());
+        // Add DataPool
         storage.add_pool(pending_lease_pool);
         storage.add_pool(lease_pool);
         storage.add_pool(transaction_pool);
@@ -79,14 +84,20 @@ impl TransactionManager{
 
     ///Initiate a [`Transaction`] with a given identifier (usually the xid of your packet)
     pub fn initiate_transaction(&self, transaction_id : u32) -> Result<(), String>{
+        // Lock index
         let index = self.index.clone();
         let mut index = index.lock().unwrap();
         match index.get(&transaction_id) {
+            // Check if there is already a transaction with same identifier
             Some(_) => Err("Transaction already exists".to_string()),
             None => {
                 let mut storage = self.storage.lock().unwrap();
+                // If not
+                // Init new transaction
                 let mut transaction = Transaction::init_new(transaction_id, chrono::Utc::now());
+                // Set pending state, which is default state
                 transaction.set_state(TransactionState::Pending("PENDING".to_string()));
+                // Store Transaction and register its address in Storage in index
                 let address = storage.store(Data::Transaction(transaction.clone()), TRANSACTION_POOL_NAME.to_string())?;
                 index.insert(transaction_id, address);
                 return Ok(())
@@ -96,6 +107,7 @@ impl TransactionManager{
 
     /// Aborts a [`Transaction`]
     pub fn abort(&mut self, transaction_id : u32) -> Result<u16, String>{
+        // Aborting just deletes the transaction, but keep two method to be clearer and to allow changes if needed
         self.delete_transaction(transaction_id)?;
         Ok(0)
     }
@@ -105,10 +117,13 @@ impl TransactionManager{
     /// - Moving bound [`LeaseV4`] from pending [`DataPool`] to running [`DataPool`]
     /// - Closing [`Transaction`]
     pub fn commit (&mut self, transaction_id : u32) -> Result<(), String> {
+        // We get the lease because we'll move it from PendinLeases to Leases
         let lease = self.get_transaction_lease(transaction_id)?;
+        // Delete transaction
         self.delete_transaction(transaction_id)?;
         let storage = self.storage.clone();
         let mut storage = storage.lock().unwrap();
+        // We finally move the lease in Leases Pool
         match storage.store(Data::Lease(lease), LEASE_POOL_NAME.to_string()) {
             Err(err) => Err(err),
             _ => Ok(())
@@ -119,15 +134,21 @@ impl TransactionManager{
     /// autommatically either commited ot aborted depnding on the incoming events.
     pub fn bind_lease(&mut self, xid : u32, lease : LeaseV4) -> Result<u16, String>{
         let t = self.get_transaction(xid)?;
+        // If there is no lease already bound
         if t.pending_lease_address == 0 {
             let xid = t.xid;
+            // We change the state to BOUND
             self.update_transaction_state(xid, TransactionState::Bound("BOUND".to_string()))?;
             let mut t = self.get_transaction(xid)?;
             let storage = self.storage.clone();
             let mut storage = storage.lock().unwrap();
+            // We store the lease and get the Storage location
             let data_lease = Data::Lease(LeaseData::from(lease));
             let lease_address = storage.store(data_lease, PENDING_LEASE_POOL_NAME.to_string())?;
+            // Registers lease Storage location in "pending_lease_address" field of transaction
             t.bind(lease_address);
+            // We just update the transaction by removing it and adding it back to storage (because RuntimeStorage
+            // doesn't implement update yet)
             storage.delete(t.id(), TRANSACTION_POOL_NAME.to_string());
             let address = storage.store(Data::Transaction(t), TRANSACTION_POOL_NAME.to_string())?;
             let index = self.index.clone();
@@ -145,13 +166,14 @@ impl TransactionManager{
     fn delete_transaction(&self, transaction_id : u32) -> Result<(), String>{
         let t = self.get_transaction(transaction_id)?;
         let transaction_address = t.uid;
-        let lease_address = t.pending_lease_address; //Not yet implemented in fp_core
+        let lease_address = t.pending_lease_address;
 
         let storage = self.storage.clone();
         let mut storage = storage.lock().unwrap();
 
         let index = self.index.clone();
         let mut index = index.lock().unwrap();
+        // Remove transaction from index
         index.remove(&transaction_id);
         //Drops transaction from storage
         storage.delete(transaction_address, TRANSACTION_POOL_NAME.to_string());
@@ -162,36 +184,35 @@ impl TransactionManager{
 
     /// Gets [`Transaction`] from identifier
     pub fn get_transaction(&self, transaction_id : u32) -> Result<Transaction, String>{
+        // Get transaction location
         let transaction_address = self.get_transaction_address(&transaction_id).ok_or_else(||"Error".to_string())?;
+        //Lock storage
         let storage = self.storage.clone();
         let storage = storage.lock().unwrap();
+        // Get transaction
         let data = storage.get(transaction_address)?;
         let transaction = extract!(data, Data::Transaction).ok_or_else(|| "Error".to_string())?;
         Ok(transaction)
     }
 
-    /// Given a [`LeaseV4`] and an xid, changes the lease of the coresponding transaction
-    pub fn update_transaction_lease(&mut self, transaction_id : u32, new_lease : LeaseV4) -> Result<(), String>{
-        self.delete_transaction(transaction_id)?;
-        self.initiate_transaction(transaction_id)?;
-        self.bind_lease(transaction_id, new_lease)?;
-        Ok(())
-    }
-
     /// Updates the state of a [`Transaction`] given its id
     fn update_transaction_state(&mut self, transaction_id : u32, state : TransactionState) -> Result<(), String>{
+        // We need to remove and add back to update
         let address = self.get_transaction_address(&transaction_id).ok_or_else(||"No address for given transaction".to_string())?;
         let mut t = self.get_transaction(transaction_id)?;
+        // Update
         t.set_state(state);
         let storage = self.storage.clone();
         let mut storage = storage.lock().unwrap();
+        // Delete
         storage.delete(address,TRANSACTION_POOL_NAME.to_string());
+        // Add the transaction bak
         let new_address = storage.store(Data::Transaction(t), TRANSACTION_POOL_NAME.to_string())?;
         let index = self.index.clone();
         let mut index = index.lock().unwrap();
         index.remove(&transaction_id);
+        // Update index consequently
         index.insert(transaction_id, new_address);
-
         Ok(())
     }
 
@@ -218,7 +239,7 @@ impl TransactionManager{
         index.get(&xid).is_some()
     }
 
-    /// Returns the storage address of a transaction given its id
+    /// Returns the storage address (should be called location...) of a transaction given its id
     pub fn get_transaction_address(&self, xid : &u32) -> Option<u16>{
         let index = self.index.clone();
         let index = index.lock().unwrap();
@@ -250,18 +271,23 @@ impl TransactionManager{
         let xid = packet.xid;
         let t = self.get_transaction(xid)?;
         match packet.options.server_identifier() {
+            
             Some(address) => {
                 if !address.is_unspecified() {
+                    /// Client responded to our DHCPOFFER by chosing our address as server_identifier
                     if address == ADDRESS {
                         match t.state {
+                            // If the state was WAITING...
                             TransactionState::Waiting(_) => {
+                                ///... we switch to REQUESTED state
                                 self.update_transaction_state(xid, TransactionState::Requested("REQUESTED".to_string()))?;
                                 return Ok(());
                             }
+                            // Either somebody is doing something nasty or the dhcp is not working
                             _ => return Err("Trying to request a lease never awaited".to_string())
                         }
                     }
-                    // Client chose another server
+                    // Client chose another server and didn't answer our DHCPOFFER
                     else {
                         self.abort(xid)?;
                         return Ok(())
@@ -270,7 +296,7 @@ impl TransactionManager{
             }
             _ => return Err("Unvalid Server Identifier".to_string())
         }
-        // If server identifier is unspecified  
+        
         Ok(())
     }
 
@@ -289,9 +315,9 @@ impl TransactionManager{
         let xid = packet.xid;
         let t = self.get_transaction(xid)?;
         match t.state() {
-            // If the transaction was requested and ACK is being sent, transaction has to be commited
+            // If the transaction was requested and ACK is being sent, transaction must be commited
             TransactionState::Requested(_e) => self.commit(xid),
-            _ => Ok(())
+            _ => Ok(()) // Maybe will need something else there
         }
     }
 
@@ -306,7 +332,7 @@ impl TransactionManager{
         let t = self.get_transaction(xid)?;
         match t.state {
             TransactionState::Bound(_e) => self.update_transaction_state(xid, TransactionState::Waiting("WAITING".to_string()))?,
-            _ => return Err("Trying to offer but no lease has been bound".to_string())
+            _ => return Err("Trying to offer but no lease has been bound...".to_string())
         };
         
         Ok(())
@@ -319,13 +345,16 @@ impl TransactionManager{
 
     /// Drop [`Transaction`] that have timed out
     pub fn watchout(&mut self) -> Result<(), String>{
+        // Lock index
         let index = self.index.clone();
         let index_list = index.clone();
         let keys : Vec<u32>;
         {   
             let index_list = index_list.lock().unwrap();
+            // Sus code but didn't know how to do better
             keys = index_list.keys().collect_vec().into_iter().map(|k| *k).collect_vec();
         }
+        // Check which transactions are outdated
         let outdated_transactions = keys.into_iter().filter(|key|{
             let t = *key;
             match self.get_transaction(t){
@@ -336,6 +365,7 @@ impl TransactionManager{
             }
         }).collect_vec();
         
+        // Abort every transaction that are outdated
         for transaction_id in outdated_transactions {
             println!("Aborting {}", transaction_id);
             self.abort(transaction_id)?;
