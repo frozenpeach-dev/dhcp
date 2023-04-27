@@ -19,3 +19,5 @@ serde = { version = "1.0.160", features = ["derive"] }
 serde_yaml = "0.9.21"
 mysql = "*"
 tokio = { version = "1", features = ["full"] }
+pnet = "0.33.0" 
+serde_with = "2.3.2"
