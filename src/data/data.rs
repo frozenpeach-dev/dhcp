@@ -7,8 +7,8 @@ use mysql::{self, prelude::FromRow, params};
 use std::str::FromStr;
 
 #[derive(Clone, Storable)]
-/// [`Data`] is an enum used by [`RuntimeStorage`] to store several types of data.
-/// [`Data`] must derive [`Storable`] and implment [`FromRow`] and [`Clone`] 
+/// `Data` is an enum used by [`RuntimeStorage`] to store several types of data.
+/// `Data` must derive [`Storable`] and implment [`FromRow`] and [`Clone`] 
 /// in order to be stored in a [`RuntimeStorage`]
 /// 
 /// To store a special type of data, you will need to implement 
