@@ -6,8 +6,8 @@ use crate::netutils::hw_addr::HardwareAddress;
 
 use super::ip_subnet::Ipv4Subnet;
 
+#[derive(Clone)]
 pub struct LeaseV4<'a> {
-
     addr: Ipv4Addr,
     subnet: &'a Ipv4Subnet,
     t_begin: DateTime<Utc>,
@@ -148,6 +148,10 @@ impl<'a> LeaseV4<'a> {
         &self
     ) -> &Ipv4Subnet {
         self.subnet
+    }
+
+    pub fn end(&self) -> DateTime<Utc>{
+        self.t_end
     }
 }
 
