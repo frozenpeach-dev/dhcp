@@ -15,7 +15,48 @@ const PENDING_LEASE_POOL_NAME : &str = "PendingLeases";
 const LEASE_POOL_NAME : &str = "Leases";
 const TRANSACTION_POOL_NAME : &str = "Transactions";
 
-
+/// [`TransactionManager`] is the service that deals with the fact that lease are not
+/// either free or allocated but can also be in an intermediate state "pending".
+/// This leads to the fact that packets going through the hooks must be monitored
+/// in order to decide in which state a lease is living.
+///
+/// To do so, the [`TransactionManager`] introduces a new struct [`Transaction`]
+/// that can live in several states defined by [`TransactionState`]. The interest
+/// lies on the fact that one can bind a [`LeaseV4`] to a [`Transaction`] with the
+/// method called [`bind_lease`].
+///
+/// Once the lease bound, the manager will handle every input and output packet to
+/// decide if a transaction must be commited or aborted. Binding a lease to a
+/// transaction leads to the fact that both lease and bound transaction will
+/// have the same lifecycle. Thus committing or aborting a transaction will have the
+/// same effet on the lease.
+///
+/// To initiate a [`TransactionManager`], you will need a [`RuntimeStorage`] enclosed
+/// in an Arc Mutex.
+///
+/// # Examples
+/// ```
+/// // Create your manager
+/// let my_storage = RuntimeStorage::new();
+/// let my_shared_storage = Arc::new(Mutex::new(my_storage));
+/// let my_manager = TransactionManager::new(my_shared_storage);
+///
+/// //Init your manager
+/// my_manager.init();
+///
+/// //Start the monitoring on your manager
+/// let my_manager = Arc::new(Mutex::new(my_manager));
+/// let my_monitor = my_manager.clone();
+///
+/// tokio::spawn(async move {
+/// loop {
+///     tokio::time::sleep(time::Duration::from_secs(1)).await;
+///     let mut syncer = transaction_syncer.lock().unwrap();
+///     syncer.watchout().unwrap();
+/// }
+/// });
+///
+/// ```
 pub struct TransactionManager {
     // Index registers every Transaction and their address in RuntimeStorage
     // Could maybe improve in the future by making it not a Arc Mutex
@@ -24,48 +65,7 @@ pub struct TransactionManager {
     storage : Arc<Mutex<RuntimeStorage<Data>>>
 }
 
-/// [`TransactionManager`] is the service that deals with the fact that lease are not
-/// either free or allocated but can also be in an intermediate state "pending".
-/// This leads to the fact that packets going through the hooks must be monitored
-/// in order to decide in which state a lease is living.
-/// 
-/// To do so, the [`TransactionManager`] introduces a new struct [`Transaction`]
-/// that can live in several states defined by [`TransactionState`]. The interest 
-/// lies on the fact that one can bind a [`LeaseV4`] to a [`Transaction`] with the
-/// method called [`bind_lease`].
-/// 
-/// Once the lease bound, the manager will handle every input and output packet to
-/// decide if a transaction must be commited or aborted. Binding a lease to a 
-/// transaction leads to the fact that both lease and bound transaction will 
-/// have the same lifecycle. Thus committing or aborting a transaction will have the
-/// same effet on the lease.
-/// 
-/// To initiate a [`TransactionManager`], you will need a [`RuntimeStorage`] enclosed 
-/// in an Arc Mutex.
-/// 
-/// # Examples
-/// ```
-/// // Create your manager
-/// let my_storage = RuntimeStorage::new();
-/// let my_shared_storage = Arc::new(Mutex::new(my_storage));
-/// let my_manager = TransactionManager::new(my_shared_storage);
-/// 
-/// //Init your manager
-/// my_manager.init();
-/// 
-/// //Start the monitoring on your manager
-/// let my_manager = Arc::new(Mutex::new(my_manager));
-/// let my_monitor = my_manager.clone();
-/// 
-/// tokio::spawn(async move {
-/// loop {
-///     tokio::time::sleep(time::Duration::from_secs(1)).await;
-///     let mut syncer = transaction_syncer.lock().unwrap();
-///     syncer.watchout().unwrap();
-/// }
-/// });
-/// 
-/// ```
+
 #[allow(dead_code)]
 impl TransactionManager{
     /// Initializes the manager
@@ -111,7 +111,7 @@ impl TransactionManager{
         self.delete_transaction(transaction_id)?;
         Ok(0)
     }
-    
+
     /// Commits a [`Transaction`]
     /// Commiting a [`Transaction`] includes :
     /// - Moving bound [`LeaseV4`] from pending [`DataPool`] to running [`DataPool`]
@@ -130,7 +130,7 @@ impl TransactionManager{
         }
     }
 
-    /// Given a [`LeaseV4`] and an xid, binds xid's transaction to that lease, so that the state of the lease will be 
+    /// Given a [`LeaseV4`] and an xid, binds xid's transaction to that lease, so that the state of the lease will be
     /// autommatically either commited ot aborted depnding on the incoming events.
     pub fn bind_lease(&mut self, xid : u32, lease : LeaseV4) -> Result<u16, String>{
         let t = self.get_transaction(xid)?;
@@ -159,7 +159,7 @@ impl TransactionManager{
         }else {
             Err("Lease already bound to this transaction".to_string())
         }
-        
+
     }
 
     /// Deletes a [`Transaction`] from the index and its [`LeaseV4`] from the storage
@@ -178,7 +178,7 @@ impl TransactionManager{
         //Drops transaction from storage
         storage.delete(transaction_address, TRANSACTION_POOL_NAME.to_string());
         //Drops lease from storage
-        storage.delete(lease_address, PENDING_LEASE_POOL_NAME.to_string()); 
+        storage.delete(lease_address, PENDING_LEASE_POOL_NAME.to_string());
         Ok(())
     }
 
@@ -271,7 +271,7 @@ impl TransactionManager{
         let xid = packet.xid;
         let t = self.get_transaction(xid)?;
         match packet.options.server_identifier() {
-            
+
             Some(address) => {
                 if !address.is_unspecified() {
                     /// Client responded to our DHCPOFFER by chosing our address as server_identifier
@@ -296,7 +296,7 @@ impl TransactionManager{
             }
             _ => return Err("Unvalid Server Identifier".to_string())
         }
-        
+
         Ok(())
     }
 
@@ -334,7 +334,7 @@ impl TransactionManager{
             TransactionState::Bound(_e) => self.update_transaction_state(xid, TransactionState::Waiting("WAITING".to_string()))?,
             _ => return Err("Trying to offer but no lease has been bound...".to_string())
         };
-        
+
         Ok(())
     }
 
@@ -349,7 +349,7 @@ impl TransactionManager{
         let index = self.index.clone();
         let index_list = index.clone();
         let keys : Vec<u32>;
-        {   
+        {
             let index_list = index_list.lock().unwrap();
             // Sus code but didn't know how to do better
             keys = index_list.keys().collect_vec().into_iter().map(|k| *k).collect_vec();
@@ -358,13 +358,13 @@ impl TransactionManager{
         let outdated_transactions = keys.into_iter().filter(|key|{
             let t = *key;
             match self.get_transaction(t){
-                Ok(t) =>{ 
+                Ok(t) =>{
                     t.outdated()
                 },
                 _ => false
             }
         }).collect_vec();
-        
+
         // Abort every transaction that are outdated
         for transaction_id in outdated_transactions {
             println!("Aborting {}", transaction_id);
@@ -396,7 +396,7 @@ mod test {
     use crate::packet::dhcp_packet::DhcpV4Packet;
     use crate::transactions::manager::{TransactionManager, Transaction, TransactionState, ADDRESS};
     use crate::data::data::{Data, LeaseData};
-    
+
     const DHCP_REQUEST : [u8; 300] = [
         0x01, 0x01, 0x06, 0x00, 0xaa, 0xed,
         0x4e, 0xea, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -488,7 +488,7 @@ mod test {
         0x4d, 0x42, 0x50, 0x2d, 0x64, 0x65, 0x2d, 0x53, 0x61, 0x63, 0x68, 0x61, 0xff, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     ];
-    
+
     #[tokio::test(flavor = "multi_thread")]
     async fn test_init(){
         let db = DbManager::new(String::from("dhcp"), String::from("frozenpeach"), String::from("poney"), String::from("127.0.0.1:3333"));
@@ -500,7 +500,7 @@ mod test {
         let transaction_manager = TransactionManager::new(storage);
         let manager = Arc::new(Mutex::new(transaction_manager));
         let transaction_manager = manager.clone();
-        { 
+        {
             let transaction_manager = transaction_manager.lock().unwrap();
             transaction_manager.init();
         }
@@ -514,7 +514,7 @@ mod test {
                 syncer.watchout().unwrap();
             }
         });
-        
+
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(time::Duration::from_millis(100)).await;
@@ -522,7 +522,7 @@ mod test {
             }
         });
         discover_process(manager_handler, test_db, true);
-        
+
         tokio::time::sleep(time::Duration::from_secs(7)).await;
     }
 
@@ -541,7 +541,7 @@ mod test {
         let mut packet_request = DhcpV4Packet::from_raw_bytes(DHCP_REQUEST.as_slice());
         let mut packet_ack = DhcpV4Packet::from_raw_bytes(DHCP_ACK.as_slice());
         let expected_lease_address : u16;
-        
+
         //Test discover handling
         println!("Testing discover handling");
         let packet_discover = DhcpV4Packet::from_raw_bytes(DHCP_DISCOVER.as_slice());
@@ -560,7 +560,7 @@ mod test {
             assert_eq!(transaction.xid, xid);
             assert_matches!(transaction.state, TransactionState::Pending(_));
         }
-    
+
         //Test lease binding
         println!("Testing lease binding");
         {
@@ -608,7 +608,7 @@ mod test {
             assert_eq!(lease.address(), l.address());
             //Note that expiration differ. To be fixed.
         }
-        
+
         if success {
             println!();
             println!("--- Switching to lease request ---");
@@ -692,4 +692,3 @@ mod test {
         }
     }
 }
-
