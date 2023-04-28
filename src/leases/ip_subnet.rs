@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use crate::packet::dhcp_options::DhcpOptions;
 
 
-/// `Ipv4Subnet` provides an abstraction layer over 
+/// `Ipv4Subnet` provides an abstraction layer over
 /// IP v4 subnets, to help manage such subnets.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Ipv4Subnet {
@@ -40,7 +40,7 @@ impl Ipv4Subnet {
     /// Returns the network address corresponding to the
     /// `Ipv4Subnet`
     ///
-    /// # Examples: 
+    /// # Examples:
     ///
     /// ```
     /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
@@ -53,7 +53,7 @@ impl Ipv4Subnet {
     /// Returns the broadcast address corresponding to the
     /// `Ipv4Subnet`
     ///
-    /// # Examples: 
+    /// # Examples:
     ///
     /// ```
     /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
@@ -72,7 +72,7 @@ impl Ipv4Subnet {
     /// Returns the number of IP addresses belonging to this
     /// `Ipv4Subnet`.
     ///
-    /// # Examples : 
+    /// # Examples :
     ///
     /// ```
     /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
@@ -99,10 +99,10 @@ impl Ipv4Subnet {
         self.alloc_ptr - 1 - self.released.len() as u32
     }
 
-    /// Check if a given [`Ipv4Addr`] belongs to 
+    /// Check if a given [`Ipv4Addr`] belongs to
     /// this `Ipv4Subnet`.
     ///
-    /// # Examples: 
+    /// # Examples:
     ///
     /// ```
     /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
@@ -114,7 +114,7 @@ impl Ipv4Subnet {
     }
 
     /// Check if a given [`Ipv4Addr`] has been allocated
-    /// in that subnet. Returns false if it is yet to be 
+    /// in that subnet. Returns false if it is yet to be
     /// allocated, or if it does not belong to this
     /// `Ipv4Subnet`.
     ///
@@ -137,10 +137,10 @@ impl Ipv4Subnet {
     /// Returns an error if it does not belong to this `Ipv4Subnet`,
     /// or if it has not been allocated yet.
     ///
-    /// # Examples: 
+    /// # Examples:
     ///
     /// ```
-    /// let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+    /// let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
     /// subnet.allocate();
     /// assert!(subnet.free(Ipv4Addr::new(192, 168, 0, 1)).is_ok());
     /// assert!(!subnet.free(Ipv4Addr::new(192, 168, 0, 2)).is_ok());
@@ -151,7 +151,7 @@ impl Ipv4Subnet {
         if !self.contains(ip) { return Err(()); };
         if self.is_free(ip) {
             return Err(());
-        }; 
+        };
 
         self.released.push(ip);
         Ok(())
@@ -188,9 +188,9 @@ impl Ipv4Subnet {
     /// available.
     ///
     /// # Examples:
-    /// 
+    ///
     /// ```
-    /// let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+    /// let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
     /// subnet.allocate();
     /// assert(!subnet.is_free(Ipv4Addr::new(192, 168, 0, 1)));
     /// ```
@@ -259,7 +259,7 @@ mod tests {
         assert!(subnet.contains(Ipv4Addr::new(192, 168, 0, 3)));
         assert!(!subnet.contains(Ipv4Addr::new(192, 168, 1, 0)));
     }
-    
+
     #[test]
     fn test_subnet_count() {
         let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_subnet_free() {
-        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         subnet.allocate().unwrap();
         assert!(subnet.free(Ipv4Addr::new(192, 168, 0, 1)).is_ok());
         assert!(!subnet.free(Ipv4Addr::new(192, 168, 1, 0)).is_ok());
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_static_free() {
-        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
 
         subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).unwrap();
         assert!(subnet.free_static_alloc(Ipv4Addr::new(192, 168, 0, 5)).is_ok());
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_subnet_allocation() {
-        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         let first_ip = subnet.allocate().unwrap();
 
         assert!(first_ip == Ipv4Addr::new(192, 168, 0, 1));
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_static_allocation() {
-        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24); 
+        let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
 
         subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).unwrap();
         assert!(!subnet.is_free(Ipv4Addr::new(192, 168, 0 ,5)));

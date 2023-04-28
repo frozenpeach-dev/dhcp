@@ -1,11 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use fp_core::{hooks::{self, hook_registry::{Hook, HookRegistry}, typemap::TypeMap, flags::HookFlag}, core::{packet::PacketContext, errors::HookError}};
+use fp_core::{hooks::{hook_registry::{Hook, HookRegistry, HookClosure}, typemap::TypeMap}, core::packet::PacketContext};
 
 use crate::{packet::dhcp_packet::DhcpV4Packet, transactions::manager::TransactionManager};
 
 fn init_transaction_manager_hook(mut registry : HookRegistry<DhcpV4Packet, DhcpV4Packet>) -> HookRegistry<DhcpV4Packet, DhcpV4Packet>{
-    let input_handler = Box::new(|type_map : Arc<Mutex<TypeMap>>, context : &mut PacketContext<DhcpV4Packet, DhcpV4Packet>|{
+    let input_handler = HookClosure(Box::new(|type_map : Arc<Mutex<TypeMap>>, context : &mut PacketContext<DhcpV4Packet, DhcpV4Packet>|{
         let mut input_manager = type_map.lock().unwrap();
         let transaction_manager = input_manager.get_mut::<Arc<Mutex<TransactionManager>>>().unwrap();
         let input = context.get_input();
@@ -16,9 +16,9 @@ fn init_transaction_manager_hook(mut registry : HookRegistry<DhcpV4Packet, DhcpV
             Err(e) => Ok(-1),
             _ => Ok(0)
         }
-    });
+    }));
 
-    let output_handler = Box::new(|type_map : Arc<Mutex<TypeMap>>, context : &mut PacketContext<DhcpV4Packet, DhcpV4Packet>|{
+    let output_handler = HookClosure(Box::new(|type_map : Arc<Mutex<TypeMap>>, context : &mut PacketContext<DhcpV4Packet, DhcpV4Packet>|{
         let mut input_manager = type_map.lock().unwrap();
         let transaction_manager = input_manager.get_mut::<Arc<Mutex<TransactionManager>>>().unwrap();
         let output = context.get_output();
@@ -29,7 +29,7 @@ fn init_transaction_manager_hook(mut registry : HookRegistry<DhcpV4Packet, DhcpV
             Err(e) => Ok(-1),
             _ => Ok(0)
         }
-    });
+    }));
 
     let flags = vec![];
     let input_hook = Hook::new("TransactionInput".to_string(),input_handler,flags);
@@ -38,5 +38,5 @@ fn init_transaction_manager_hook(mut registry : HookRegistry<DhcpV4Packet, DhcpV
     output_hook.must(input_hook.id());
     registry.register_hook(fp_core::core::state::PacketState::Received, output_hook);
     registry
-    
+
 }

@@ -1,6 +1,6 @@
 use std::net::Ipv4Addr;
 use chrono::{DateTime, Utc};
-use fp_core::utils::data::Storable;
+use fp_core::storage::data::Storable;
 use derive_data::Storable;
 use crate::{transactions::transaction::Transaction, leases::lease::LeaseV4};
 use mysql::{self, prelude::FromRow, params};
@@ -8,26 +8,26 @@ use std::str::FromStr;
 
 #[derive(Clone, Storable)]
 /// `Data` is an enum used by [`RuntimeStorage`] to store several types of data.
-/// `Data` must derive [`Storable`] and implment [`FromRow`] and [`Clone`] 
+/// `Data` must derive [`Storable`] and implment [`FromRow`] and [`Clone`]
 /// in order to be stored in a [`RuntimeStorage`]
-/// 
-/// To store a special type of data, you will need to implement 
+///
+/// To store a special type of data, you will need to implement
 /// [`Storable`] and [`FromRow`] for this type as well.
-/// 
+///
 /// # Examples
 /// ```
 /// pub struct MySpecialData {
-///     
+///
 /// }
-/// 
+///
 /// impl FromRow for MyData {
 ///     //Impl here
 /// }
-/// 
+///
 /// impl Storable for MyData {
 ///     //Impl here
 /// }
-/// 
+///
 /// #[derive(Storable, Clone)]
 /// pub enum Data {
 ///     MySpecialData(MySpecialData)
@@ -42,7 +42,7 @@ pub enum Data{
     Null()
 }
 
-/// [`LeaseData`] is a struct created to make [`LeaseV4`] storable by 
+/// [`LeaseData`] is a struct created to make [`LeaseV4`] storable by
 /// storing only necessary fields of a lease.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct LeaseData {
@@ -120,7 +120,7 @@ impl FromRow for LeaseData {
         where
             Self: Sized {
         Ok(LeaseData::from_row(row))
-        
+
     }
 }
 

@@ -3,7 +3,7 @@ use std::net::Ipv4Addr;
 use std::sync::{Arc, Mutex};
 use itertools::Itertools;
 use crate::extract;
-use fp_core::utils::data::{Storable, RuntimeStorage, DataPool};
+use fp_core::storage::data::{Storable, RuntimeStorage, DataPool};
 use crate::data::data::{Data, LeaseData};
 use crate::leases::lease::LeaseV4;
 use crate::packet::dhcp_packet::DhcpV4Packet;
@@ -381,7 +381,7 @@ impl TransactionManager{
 mod test {
     use chrono::Duration;
     use fp_core::core::packet::PacketType;
-    use fp_core::utils::data::{DbManager, RuntimeStorage};
+    use fp_core::storage::data::{DbManager, RuntimeStorage};
     use mysql::params;
     use tokio;
     use std::assert_matches::assert_matches;

@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fp_core::utils::data::Storable;
+use fp_core::storage::data::Storable;
 use mysql::{params, prelude::FromRow};
 
 #[derive(Clone, Debug)]
@@ -102,7 +102,7 @@ impl FromRow for Transaction {
             "REQUESTED" => a = TransactionState::Requested("REQUESTED".to_string()),
             "WAITING" => a = TransactionState::Waiting("WAITING".to_string()),
             "BOUND" => a = TransactionState::Bound("BOUND".to_string()),
-            _ => a = TransactionState::Undefined("UNDEFINED".to_string()) 
+            _ => a = TransactionState::Undefined("UNDEFINED".to_string())
         }
         Self::new(a, time, lease_address, uid, identifier)
     }
