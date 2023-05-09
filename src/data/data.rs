@@ -1,8 +1,8 @@
 use std::net::Ipv4Addr;
 use chrono::{DateTime, Utc};
-use fp_core::utils::data::Storable;
+use fp_core::storage::data::Storable;
 use derive_data::Storable;
-use crate::{transactions::transaction::Transaction, leases::lease::LeaseV4};
+use crate::{transactions::transaction::Transaction, leases::{lease::LeaseV4, ip_subnet::Ipv4Subnet}};
 use mysql::{self, prelude::FromRow, params};
 use std::str::FromStr;
 
@@ -39,6 +39,7 @@ use std::str::FromStr;
 pub enum Data{
     Transaction(Transaction),
     Lease(LeaseData),
+    Ipv4Subnet(Ipv4Subnet),
     Null()
 }
 
@@ -73,6 +74,7 @@ impl FromRow for Data{
         match data_type.as_str() {
             "lease" => Data::Lease(LeaseData::from_row(row)),
             "transaction" => Data::Transaction(Transaction::from_row(row)),
+            "subnet" => Data::Ipv4Subnet(Ipv4Subnet::from_row(row)),
             _ => Data::Null()
         }
     }

@@ -1,6 +1,6 @@
 use std::net::Ipv4Addr;
 
-use chrono::{Duration, Utc, DateTime};
+use chrono::{DateTime, Duration, Utc};
 
 use crate::netutils::hw_addr::HardwareAddress;
 
@@ -13,17 +13,15 @@ pub struct LeaseV4<'a> {
     t_begin: DateTime<Utc>,
     t_end: DateTime<Utc>,
     hw_addr: HardwareAddress,
-    cid: HardwareAddress, 
-    hostname: String
-
+    cid: HardwareAddress,
+    hostname: String,
 }
 
 impl<'a> LeaseV4<'a> {
-
     /// Create a new `LeaseV4` from given parameters
     ///
     /// The [`Ipv4Addr`] must be allocated
-    /// in the correct [`Ipv4Subnet`] before the 
+    /// in the correct [`Ipv4Subnet`] before the
     /// creation of the `LeaseV4`
     ///
     /// # Examples:
@@ -48,18 +46,27 @@ impl<'a> LeaseV4<'a> {
         duration: Duration,
         hw_addr: HardwareAddress,
         cid: HardwareAddress,
-        hostname: String
+        hostname: String,
     ) -> Result<Self, ()> {
-
-        if !subnet.contains(addr) { return Err(()); };
+        if !subnet.contains(addr) {
+            return Err(());
+        };
 
         let t_begin = Utc::now();
         let t_end = t_begin + duration;
-        Ok(Self { addr, subnet, t_begin, t_end, hw_addr, cid, hostname })
+        Ok(Self {
+            addr,
+            subnet,
+            t_begin,
+            t_end,
+            hw_addr,
+            cid,
+            hostname,
+        })
     }
 
     /// Returns the remaining [`Duration`] on the `LeaseV4`
-    /// 
+    ///
     /// Returns a [`Duration`] of zero if the lease already ended
     ///
     /// # Examples:
@@ -77,10 +84,10 @@ impl<'a> LeaseV4<'a> {
     /// assert!(lease.remaining() < Duration::hours(8));
     /// ```
 
-    pub fn remaining(
-        &self
-    ) -> Duration {
-        if self.t_end - Utc::now() < Duration::zero() { return Duration::zero(); };
+    pub fn remaining(&self) -> Duration {
+        if self.t_end - Utc::now() < Duration::zero() {
+            return Duration::zero();
+        };
         self.t_end - Utc::now()
     }
 
@@ -88,7 +95,7 @@ impl<'a> LeaseV4<'a> {
     ///
     /// Returns an error if the lease already expired.
     ///
-    /// # Examples: 
+    /// # Examples:
     ///
     /// ```
     /// let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
@@ -104,53 +111,40 @@ impl<'a> LeaseV4<'a> {
     /// assert!(lease.remaining() > Duration::hours(8));
     /// ```
 
-    pub fn extend(
-        &mut self,
-        time_to_add: Duration
-    ) -> Result<(), ()> {
-        if Utc::now() > self.t_end { return Err(()); };
+    pub fn extend(&mut self, time_to_add: Duration) -> Result<(), ()> {
+        if Utc::now() > self.t_end {
+            return Err(());
+        };
         self.t_end += time_to_add;
 
         Ok(())
     }
 
-    pub fn hostname(
-        &self
-    ) -> &str {
+    pub fn hostname(&self) -> &str {
         self.hostname.as_ref()
     }
 
-    pub fn hostname_mut(
-        &mut self
-    ) -> &mut String {
+    pub fn hostname_mut(&mut self) -> &mut String {
         &mut self.hostname
     }
 
-    pub fn addr(
-        &self
-    ) -> Ipv4Addr {
+    pub fn addr(&self) -> Ipv4Addr {
         self.addr
     }
 
-    pub fn cid(
-        &self
-    ) -> HardwareAddress {
+    pub fn cid(&self) -> HardwareAddress {
         self.cid
     }
 
-    pub fn hw_addr(
-        &self
-    ) -> HardwareAddress {
+    pub fn hw_addr(&self) -> HardwareAddress {
         self.hw_addr
     }
 
-    pub fn subnet(
-        &self
-    ) -> &Ipv4Subnet {
+    pub fn subnet(&self) -> &Ipv4Subnet {
         self.subnet
     }
 
-    pub fn end(&self) -> DateTime<Utc>{
+    pub fn end(&self) -> DateTime<Utc> {
         self.t_end
     }
 }
@@ -170,7 +164,8 @@ mod tests {
             HardwareAddress::broadcast(),
             HardwareAddress::broadcast(),
             String::from("test_lease"),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(lease.hostname == "test_lease");
         assert!(lease.addr() == Ipv4Addr::new(192, 168, 0, 3));
@@ -186,11 +181,11 @@ mod tests {
             HardwareAddress::broadcast(),
             HardwareAddress::broadcast(),
             String::from("test_lease"),
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         assert!(lease.remaining() < Duration::hours(8));
         lease.extend(Duration::hours(2)).unwrap();
         assert!(lease.remaining() > Duration::hours(9));
     }
-
 }
