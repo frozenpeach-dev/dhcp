@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-derive_data = { path = "../derive_data" }
+derive_data = { path = "../fp_derive" }
 fp_core = { path = "../fp_core" }
 chrono = "0.4.24"
 mac_address  = "1.1.4"
@@ -21,3 +21,4 @@ mysql = "*"
 tokio = { version = "1", features = ["full"] }
 pnet = "0.33.0" 
 serde_with = "2.3.2"
+base64 = "0"

@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fp_core::utils::data::Storable;
+use fp_core::storage::data::Storable;
 use mysql::{params, prelude::FromRow};
 
 #[derive(Clone, Debug)]
