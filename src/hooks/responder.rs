@@ -113,8 +113,8 @@ mod tests {
 
     use crate::allocators::static_alloc::static_allocation::StaticAllocation;
     use crate::allocators::static_alloc::static_allocator::StaticAllocator;
+    use crate::allocators::dynamic_alloc::dynamic_allocator::DynamicAllocator;
     use crate::leases::ip_subnet::Ipv4Subnet;
-    use crate::netutils::hw_addr::HardwareAddress;
     use crate::packet::dhcp_options::DhcpOptions;
     use crate::{cfg::main_cfg::load_main_cfg, packet::dhcp_packet::DhcpV4Packet};
 
@@ -145,7 +145,50 @@ mod tests {
     ];
 
     #[test]
-    fn test_dhcp_discover_responder_dynamic_alloc() {}
+    fn test_dhcp_discover_responder_dynamic_alloc() {
+
+        let mut input_packet = DhcpV4Packet::from_raw_bytes(&INPUT_DHCP_DISCOVER);
+        input_packet
+            .options
+            .set_client_identifier(Some(input_packet.chadd.raw.to_vec()));
+        input_packet
+            .giaddr = Ipv4Addr::new(192, 168, 0, 1);
+        let net_cfg = load_main_cfg("tests/main.yml")
+            .unwrap()
+            .network_cfg()
+            .clone();
+        let subnet = Arc::new(Mutex::new(Ipv4Subnet::new(
+            Ipv4Addr::new(192, 168, 0, 0),
+            31,
+        )));
+        let mut allocator = DynamicAllocator::new();
+        allocator.register_subnet(subnet.clone());
+
+        let s_allocator = StaticAllocator::new();
+
+        let mut registry: HookRegistry<DhcpV4Packet, DhcpV4Packet> = HookRegistry::new();
+        registry.register_service(Mutex::new(net_cfg));
+        registry.register_service(Mutex::new(allocator));
+        registry.register_service(Mutex::new(s_allocator));
+        let mut context: PacketContext<DhcpV4Packet, DhcpV4Packet> =
+            PacketContext::from(input_packet);
+        registry.register_hook(
+            fp_core::core::state::PacketState::Received,
+            Hook::new(String::from("responder_hook"), responder_hook(), Vec::new()),
+        );
+        registry.run_hooks(&mut context).unwrap();
+
+        let output = context.get_output();
+        assert_eq!(output.op, 2);
+        assert_eq!(output.xid, context.get_input().xid);
+        assert_eq!(
+            output.options.server_identifier(),
+            Some(Ipv4Addr::new(127, 0, 0, 1))
+        );
+        assert_eq!(output.yiaddr, Ipv4Addr::new(192, 168, 0, 1));
+        assert_eq!(output.options.message_type(), Some(2));
+
+    }
 
     #[test]
     fn test_dhcp_discover_responder_static_alloc() {
@@ -185,13 +228,13 @@ mod tests {
         registry.run_hooks(&mut context).unwrap();
 
         let output = context.get_output();
-        dbg!(output.clone());
         assert_eq!(output.op, 2);
         assert_eq!(output.xid, context.get_input().xid);
         assert_eq!(
             output.options.server_identifier(),
             Some(Ipv4Addr::new(127, 0, 0, 1))
         );
+        assert_eq!(output.yiaddr, Ipv4Addr::new(192, 168, 0, 3));
         assert_eq!(output.options.message_type(), Some(2));
     }
 }

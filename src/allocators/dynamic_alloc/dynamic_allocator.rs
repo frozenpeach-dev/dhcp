@@ -159,7 +159,7 @@ mod tests {
         let draft2 = allocator_mut.allocate(&packet);
         let sub = subnet.lock().unwrap();
         assert!(!sub.is_free(Ipv4Addr::new(192, 168, 0, 17)));
-        assert!(!draft2.is_none());
+        assert!(draft2.is_some());
         assert!(draft2.unwrap().ip_addr() != Ipv4Addr::new(192, 168, 0, 17))
     }
 }

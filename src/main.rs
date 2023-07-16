@@ -1,6 +1,5 @@
 #![feature(test)]
 
-use std::cmp::max;
 extern crate test;
 
 mod allocators;

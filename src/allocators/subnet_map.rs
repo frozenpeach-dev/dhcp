@@ -96,7 +96,7 @@ impl SubnetV4Map {
             }
             Ordering::Greater
         });
-        let subnet = available_subnets.get(subnet.unwrap())?;
+        let subnet = available_subnets.get(subnet.ok()?)?;
         let subnet = *(*subnet);
 
         Some(self.subnets.get(&subnet)?.clone())
