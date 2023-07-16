@@ -12,7 +12,7 @@ use crate::{
     packet::dhcp_packet::{DhcpMessage, DhcpV4Packet},
 };
 
-struct DynamicAllocator {
+pub(crate) struct DynamicAllocator {
     subnet_map: SubnetV4Map,
 }
 

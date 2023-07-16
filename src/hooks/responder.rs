@@ -4,18 +4,23 @@ use fp_core::{
     core::{errors::HookError, packet::PacketContext},
     hooks::{hook_registry::HookClosure, typemap::TypeMap},
 };
+use log::trace;
 
+use crate::allocators::allocator::Allocator;
+use crate::allocators::dynamic_alloc::dynamic_allocator::DynamicAllocator;
+use crate::allocators::static_alloc::static_allocator::StaticAllocator;
 use crate::{cfg::main_cfg::NetworkCfg, packet::dhcp_packet::DhcpV4Packet};
 
 pub fn responder_hook() -> HookClosure<DhcpV4Packet, DhcpV4Packet> {
     HookClosure(Box::new(
         |services: Arc<Mutex<TypeMap>>, context: &mut PacketContext<DhcpV4Packet, DhcpV4Packet>| {
-            _fill_dhcp_header(services.clone(), context)?;
             match context.get_input().options.message_type().unwrap() {
-                1 => _handle_dhcp_discover(services, context),
-                3 => _handle_dhcp_request(services, context),
+                1 => _handle_dhcp_discover(services.clone(), context),
+                3 => _handle_dhcp_request(services.clone(), context),
                 _ => Ok(1),
-            }
+            }?;
+            _fill_dhcp_header(services.clone(), context)?;
+            Ok(0)
         },
     ))
 }
@@ -35,6 +40,7 @@ fn _fill_dhcp_header(
 
     output.options.set_server_identifier(net_cfg.ipv4());
     drop(net_cfg);
+    drop(cfg);
     output.op = 2;
     output.htype = 1;
     output.hlen = 6;
@@ -56,7 +62,32 @@ fn _handle_dhcp_discover(
     let input = context.get_input().clone();
     let output = context.get_mut_output();
 
-    output.options.set_message_type(Some(2));
+    let services_unlocked = services.lock().unwrap();
+    let mut static_allocator = services_unlocked
+        .get::<Arc<Mutex<StaticAllocator>>>()
+        .unwrap()
+        .lock()
+        .unwrap();
+    if let Some(draft) = static_allocator.allocate(&input) {
+        output.yiaddr = draft.ip_addr();
+        output.options = draft.options().clone();
+        output.options.set_message_type(Some(2));
+        return Ok(0);
+    }
+    drop(static_allocator);
+    let mut dynamic_allocator = services_unlocked
+        .get::<Arc<Mutex<DynamicAllocator>>>()
+        .unwrap()
+        .lock()
+        .unwrap();
+    if let Some(draft) = dynamic_allocator.allocate(&input) {
+        output.yiaddr = draft.ip_addr();
+        output.options = draft.options().clone();
+        output.options.set_message_type(Some(2));
+        return Ok(0);
+    }
+
+    trace!("Unable to allocate IP address, discarding request");
 
     Ok(0)
 }
@@ -80,6 +111,11 @@ mod tests {
         hooks::hook_registry::{Hook, HookClosure, HookRegistry},
     };
 
+    use crate::allocators::static_alloc::static_allocation::StaticAllocation;
+    use crate::allocators::static_alloc::static_allocator::StaticAllocator;
+    use crate::leases::ip_subnet::Ipv4Subnet;
+    use crate::netutils::hw_addr::HardwareAddress;
+    use crate::packet::dhcp_options::DhcpOptions;
     use crate::{cfg::main_cfg::load_main_cfg, packet::dhcp_packet::DhcpV4Packet};
 
     use super::responder_hook;
@@ -109,15 +145,37 @@ mod tests {
     ];
 
     #[test]
-    fn test_dhcp_discover_responder() {
-        let input_packet = DhcpV4Packet::from_raw_bytes(&INPUT_DHCP_DISCOVER);
+    fn test_dhcp_discover_responder_dynamic_alloc() {}
+
+    #[test]
+    fn test_dhcp_discover_responder_static_alloc() {
+        let mut input_packet = DhcpV4Packet::from_raw_bytes(&INPUT_DHCP_DISCOVER);
+        input_packet
+            .options
+            .set_client_identifier(Some(input_packet.chadd.raw.to_vec()));
         let net_cfg = load_main_cfg("tests/main.yml")
             .unwrap()
             .network_cfg()
             .clone();
-
+        let mut static_allocator = StaticAllocator::new();
+        let subnet = Arc::new(Mutex::new(Ipv4Subnet::new(
+            Ipv4Addr::new(192, 168, 0, 0),
+            24,
+        )));
+        static_allocator.register_subnet(subnet.clone());
+        let mut options = DhcpOptions::new();
+        options.set_requested_ip(Some(Ipv4Addr::new(192, 168, 0, 3)));
+        options.set_subnet_mask(Some(Ipv4Addr::new(255, 255, 255, 0)));
+        static_allocator
+            .register_static_allocation(StaticAllocation::new(
+                input_packet.chadd,
+                Ipv4Addr::new(192, 168, 0, 3),
+                options,
+            ))
+            .unwrap();
         let mut registry: HookRegistry<DhcpV4Packet, DhcpV4Packet> = HookRegistry::new();
         registry.register_service(Mutex::new(net_cfg));
+        registry.register_service(Mutex::new(static_allocator));
         let mut context: PacketContext<DhcpV4Packet, DhcpV4Packet> =
             PacketContext::from(input_packet);
         registry.register_hook(
