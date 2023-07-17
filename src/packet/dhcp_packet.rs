@@ -1,6 +1,5 @@
-use std::net::Ipv4Addr;
+use std::{net::Ipv4Addr, time::Duration};
 
-use chrono::NaiveTime;
 use fp_core::core::packet::PacketType;
 use itertools::Itertools;
 
@@ -15,7 +14,7 @@ pub struct DhcpV4Packet {
     pub hlen : u8,
     pub hops : u8,
     pub xid : u32,
-    pub secs : NaiveTime,
+    pub secs : Duration,
     pub flags : [u8; 2],
     pub ciaddr : Ipv4Addr,
     pub yiaddr : Ipv4Addr,
@@ -46,7 +45,6 @@ impl PacketType for DhcpV4Packet {
     }
 
     fn from_raw_bytes(raw : &[u8]) -> Self {
-
         let mut raw = raw.to_vec();
         let op = raw.remove(0);
         let htype = raw.remove(0);
@@ -55,8 +53,9 @@ impl PacketType for DhcpV4Packet {
         let next:[u8; 4] = raw.drain(0..4).as_slice().to_owned().try_into().unwrap();
         let xid = u32::from_le_bytes(next);
         let next: [u8; 2] = raw.drain(0..2).as_slice().to_owned().try_into().unwrap();
-        let secs = NaiveTime::from_hms_opt(0, 0, u16::from_le_bytes(next) as u32).unwrap();
-
+        
+        let secs = Duration::from_secs(u16::from_le_bytes(next) as u64);
+        
         let flags = raw.drain(0..2).as_slice().to_owned().try_into().unwrap();
         let (a, b, c, d) = raw.drain(0..4).collect_tuple().unwrap();
 
