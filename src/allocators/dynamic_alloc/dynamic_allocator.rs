@@ -150,12 +150,15 @@ mod tests {
         allocator.register_subnet(subnet.clone());
         let packet = DhcpV4Packet::from_raw_bytes(&DHCP_PACKET);
 
-        assert!(packet.options.requested_ip().unwrap() == Ipv4Addr::new(192, 168, 0, 17));
+        assert_eq!(
+            packet.options.requested_ip().unwrap(),
+            Ipv4Addr::new(192, 168, 0, 17)
+        );
 
         let draft = allocator.allocate(&packet.clone()).unwrap();
         let sub = subnet.lock().unwrap();
         assert!(!sub.is_free(Ipv4Addr::new(192, 168, 0, 17)));
-        assert!(draft.ip_addr() == Ipv4Addr::new(192, 168, 0, 17));
+        assert_eq!(draft.ip_addr(), Ipv4Addr::new(192, 168, 0, 17));
     }
     #[test]
     fn test_double_allocation() {
@@ -168,13 +171,16 @@ mod tests {
         allocator_mut.register_subnet(subnet.clone());
         let packet = DhcpV4Packet::from_raw_bytes(DHCP_PACKET.as_slice());
 
-        assert!(packet.options.requested_ip().unwrap() == Ipv4Addr::new(192, 168, 0, 17));
+        assert_eq!(
+            packet.options.requested_ip().unwrap(),
+            Ipv4Addr::new(192, 168, 0, 17)
+        );
 
         allocator_mut.allocate(&packet.clone()).unwrap();
         let draft2 = allocator_mut.allocate(&packet);
         let sub = subnet.lock().unwrap();
         assert!(!sub.is_free(Ipv4Addr::new(192, 168, 0, 17)));
         assert!(draft2.is_some());
-        assert!(draft2.unwrap().ip_addr() != Ipv4Addr::new(192, 168, 0, 17))
+        assert_ne!(draft2.unwrap().ip_addr(), Ipv4Addr::new(192, 168, 0, 17))
     }
 }

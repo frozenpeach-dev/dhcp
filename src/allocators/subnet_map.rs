@@ -6,9 +6,9 @@ use crate::leases::ip_subnet::Ipv4Subnet;
 /// Custom representation of a subnet defined
 /// by its CIDR notation (network address + CIDR prefix)
 ///
-/// Used for custom comparaison purposes. It supposes that
+/// Used for custom comparison purposes. It supposes that
 /// no subnet overlap each other while comparing. Therefore
-/// it is only based on a simple comparaison of network address
+/// it is only based on a simple comparison of network address
 ///
 /// A subnet will be greater than an other subnet if its
 /// network address is bigger.

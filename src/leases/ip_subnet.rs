@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn test_broadcast_addr() {
         let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
-        assert!(subnet.broadcast() == Ipv4Addr::new(192, 168, 0, 255));
+        assert_eq!(subnet.broadcast(), Ipv4Addr::new(192, 168, 0, 255));
     }
 
     #[test]
@@ -274,14 +274,14 @@ mod tests {
     #[test]
     fn test_subnet_count() {
         let subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
-        assert!(subnet.count() == 256);
+        assert_eq!(subnet.count(), 256);
     }
 
     #[test]
     fn test_allocated_count() {
         let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         subnet.allocate().unwrap();
-        assert!(subnet.allocated_count() == 1);
+        assert_eq!(subnet.allocated_count(), 1);
     }
 
     #[test]
@@ -302,8 +302,8 @@ mod tests {
         let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         subnet.allocate().unwrap();
         assert!(subnet.free(Ipv4Addr::new(192, 168, 0, 1)).is_ok());
-        assert!(!subnet.free(Ipv4Addr::new(192, 168, 1, 0)).is_ok());
-        assert!(!subnet.free(Ipv4Addr::new(192, 168, 0, 2)).is_ok());
+        assert!(subnet.free(Ipv4Addr::new(192, 168, 1, 0)).is_err());
+        assert!(subnet.free(Ipv4Addr::new(192, 168, 0, 2)).is_err());
     }
 
     #[test]
@@ -324,11 +324,11 @@ mod tests {
         let mut subnet = Ipv4Subnet::new(Ipv4Addr::new(192, 168, 0, 0), 24);
         let first_ip = subnet.allocate().unwrap();
 
-        assert!(first_ip == Ipv4Addr::new(192, 168, 0, 1));
+        assert_eq!(first_ip, Ipv4Addr::new(192, 168, 0, 1));
         subnet.allocate().unwrap();
         assert!(subnet.free(Ipv4Addr::new(192, 168, 0, 1)).is_ok());
         let last = subnet.allocate().unwrap();
-        assert!(last == Ipv4Addr::new(192, 168, 0, 1));
+        assert_eq!(last, Ipv4Addr::new(192, 168, 0, 1));
     }
 
     #[test]
@@ -339,6 +339,8 @@ mod tests {
             .force_allocate(Ipv4Addr::new(192, 168, 0, 5))
             .unwrap();
         assert!(!subnet.is_free(Ipv4Addr::new(192, 168, 0, 5)));
-        assert!(!subnet.force_allocate(Ipv4Addr::new(192, 168, 0, 5)).is_ok());
+        assert!(subnet
+            .force_allocate(Ipv4Addr::new(192, 168, 0, 5))
+            .is_err());
     }
 }
