@@ -1,9 +1,8 @@
 use std::net::Ipv4Addr;
 
 use crate::packet::dhcp_packet::DhcpV4Packet;
-use crate::packet::{dhcp_options::DhcpOptions, dhcp_packet::DhcpMessage};
+use crate::packet::dhcp_options::DhcpOptions;
 
-#[derive(Debug)]
 pub struct AllocationDraft {
     ip_addr: Ipv4Addr,
     options: DhcpOptions,

@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex};
-use std::{cell::RefCell, net::Ipv4Addr, rc::Rc};
+use std::net::Ipv4Addr;
 
 use log::trace;
 
@@ -9,7 +9,7 @@ use crate::{
         subnet_map::SubnetV4Map,
     },
     leases::ip_subnet::Ipv4Subnet,
-    packet::dhcp_packet::{DhcpMessage, DhcpV4Packet},
+    packet::dhcp_packet::DhcpV4Packet,
 };
 
 pub(crate) struct DynamicAllocator {
@@ -40,7 +40,7 @@ impl Allocator for DynamicAllocator {
     /// ```
 
     fn allocate(&mut self, request: &DhcpV4Packet) -> Option<AllocationDraft> {
-        let subnet = self.get_client_subnet(&request)?;
+        let subnet = self.get_client_subnet(request)?;
         let mut subnet = subnet.lock().unwrap();
         let options = subnet.options().clone();
 

@@ -68,19 +68,16 @@ fn _handle_dhcp_discover(
         .unwrap()
         .lock()
         .unwrap();
-    if let Some(draft) = static_allocator.allocate(&input) {
-        output.yiaddr = draft.ip_addr();
-        output.options = draft.options().clone();
-        output.options.set_message_type(Some(2));
-        return Ok(0);
-    }
-    drop(static_allocator);
     let mut dynamic_allocator = services_unlocked
         .get::<Arc<Mutex<DynamicAllocator>>>()
         .unwrap()
         .lock()
         .unwrap();
-    if let Some(draft) = dynamic_allocator.allocate(&input) {
+
+    if let Some(draft) = static_allocator
+        .allocate(&input)
+        .or_else(|| dynamic_allocator.allocate(&input))
+    {
         output.yiaddr = draft.ip_addr();
         output.options = draft.options().clone();
         output.options.set_message_type(Some(2));
@@ -108,12 +105,12 @@ mod tests {
 
     use fp_core::{
         core::packet::{PacketContext, PacketType},
-        hooks::hook_registry::{Hook, HookClosure, HookRegistry},
+        hooks::hook_registry::{Hook, HookRegistry},
     };
 
+    use crate::allocators::dynamic_alloc::dynamic_allocator::DynamicAllocator;
     use crate::allocators::static_alloc::static_allocation::StaticAllocation;
     use crate::allocators::static_alloc::static_allocator::StaticAllocator;
-    use crate::allocators::dynamic_alloc::dynamic_allocator::DynamicAllocator;
     use crate::leases::ip_subnet::Ipv4Subnet;
     use crate::packet::dhcp_options::DhcpOptions;
     use crate::{cfg::main_cfg::load_main_cfg, packet::dhcp_packet::DhcpV4Packet};
@@ -146,13 +143,11 @@ mod tests {
 
     #[test]
     fn test_dhcp_discover_responder_dynamic_alloc() {
-
         let mut input_packet = DhcpV4Packet::from_raw_bytes(&INPUT_DHCP_DISCOVER);
         input_packet
             .options
             .set_client_identifier(Some(input_packet.chadd.raw.to_vec()));
-        input_packet
-            .giaddr = Ipv4Addr::new(192, 168, 0, 1);
+        input_packet.giaddr = Ipv4Addr::new(192, 168, 0, 1);
         let net_cfg = load_main_cfg("tests/main.yml")
             .unwrap()
             .network_cfg()
@@ -187,7 +182,6 @@ mod tests {
         );
         assert_eq!(output.yiaddr, Ipv4Addr::new(192, 168, 0, 1));
         assert_eq!(output.options.message_type(), Some(2));
-
     }
 
     #[test]
