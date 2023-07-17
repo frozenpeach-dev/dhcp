@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use std::net::Ipv4Addr;
+use std::sync::{Arc, Mutex};
 
 use log::trace;
 
@@ -44,16 +44,31 @@ impl Allocator for DynamicAllocator {
         let mut subnet = subnet.lock().unwrap();
         let options = subnet.options().clone();
 
-        if let Some(req_ip) = request.options.requested_ip() {
-            if subnet.is_free(req_ip) {
+        // TODO: Check if client has a prior allocation (expired or not) and use that ip
+
+        let mut draft: AllocationDraft;
+
+        match request.options.requested_ip() {
+            Some(req_ip) if subnet.is_free(req_ip) => {
                 subnet.force_allocate(req_ip).ok()?;
-                return Some(AllocationDraft::new(req_ip, options));
+                draft = AllocationDraft::new(req_ip, options);
+            }
+
+            _ => {
+                let ip_addr = subnet.allocate().ok()?;
+                draft = AllocationDraft::new(ip_addr, options);
+            }
+        };
+
+        if let Some(request_time) = request.options.lease_time() {
+            if let Some(subnet_time) = subnet.options().lease_time() {
+                if (request_time < 3 * subnet_time) & (request_time > subnet_time / 5) {
+                    draft.options_mut().set_lease_time(Some(request_time));
+                }
             }
         }
 
-        let ip_addr = subnet.allocate().ok()?;
-        drop(subnet);
-        Some(AllocationDraft::new(ip_addr, options))
+        Some(draft)
     }
 
     fn seal_allocation(&mut self, _draft: AllocationDraft) -> Result<(), ()> {

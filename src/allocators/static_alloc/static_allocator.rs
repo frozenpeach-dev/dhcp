@@ -6,10 +6,9 @@ use crate::{
     },
     leases::ip_subnet::Ipv4Subnet,
     netutils::hw_addr::HardwareAddress,
-    packet::dhcp_packet::DhcpMessage,
 };
 use std::sync::{Arc, Mutex};
-use std::{cell::RefCell, collections::HashMap, net::Ipv4Addr, rc::Rc};
+use std::{collections::HashMap, net::Ipv4Addr};
 
 use super::static_allocation::StaticAllocation;
 
@@ -30,16 +29,24 @@ impl Allocator for StaticAllocator {
             let record = self.registry.get(&HardwareAddress::new(*client_id))?;
 
             let ip_addr = record.options().requested_ip();
+            let mut draft: AllocationDraft;
 
-            return if let Some(ip_addr) = ip_addr {
+            if let Some(ip_addr) = ip_addr {
                 let ip_addr = u32::from(ip_addr);
-                Some(AllocationDraft::new(
-                    Ipv4Addr::from(ip_addr),
-                    record.options().clone(),
-                ))
+                draft = AllocationDraft::new(Ipv4Addr::from(ip_addr), record.options().clone());
             } else {
-                None
-            };
+                return None;
+            }
+
+            if let Some(request_lease) = request.options.lease_time() {
+                if let Some(record_time) = record.options().lease_time() {
+                    if (request_lease < 3 * record_time) & (request_lease > record_time / 5) {
+                        draft.options_mut().set_lease_time(Some(request_lease));
+                    }
+                }
+            }
+
+            return Some(draft);
         };
 
         None

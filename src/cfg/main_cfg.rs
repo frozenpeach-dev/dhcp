@@ -32,11 +32,11 @@ impl NetworkCfg {
     }
 
     /// Returns an [`Ipv4Addr`] that represents
-    /// the subnet corresponding to the 
+    /// the subnet corresponding to the
     /// network interface defined in the config
     /// file.
     ///
-    /// # Examples: 
+    /// # Examples:
     ///
     /// ```
     /// let cfg = load_main_cfg("tests/main.yml").unwrap();
@@ -54,16 +54,16 @@ impl NetworkCfg {
         {
             return Some(ip);
         } else {
-           return None; 
+           return None;
         }
-    } 
+    }
 
     /// Returns an [`Ipv4Addr`] that represents
-    /// the subnet corresponding to the 
+    /// the subnet corresponding to the
     /// network interface defined in the config
     /// file.
     ///
-    /// # Examples: 
+    /// # Examples:
     ///
     /// ```
     /// let cfg = load_main_cfg("tests/main.yml").unwrap();
@@ -81,7 +81,7 @@ impl NetworkCfg {
         {
             return Some(ip);
         } else {
-           return None; 
+           return None;
         }
 
     }
@@ -110,9 +110,9 @@ where
                 Encountered the following error: \n
                 Failed to bind network interface {}", if_name);
         })
-        .unwrap();   
+        .unwrap();
 
-    Ok(interface) 
+    Ok(interface)
 }
 
 pub fn load_main_cfg(path: &str) -> Result<DhcpCfg, std::io::Error> {
@@ -120,7 +120,7 @@ pub fn load_main_cfg(path: &str) -> Result<DhcpCfg, std::io::Error> {
     let cfg = fs::read_to_string(path)
         .expect("Fatal: failed to load main config file");
     serde_yaml::from_str(&cfg).map_err(|err| {
-        panic!("Fatal: failed to load main config file \n 
+        panic!("Fatal: failed to load main config file \n
                 Encountered the following error while trying to parse
                 YAML file: {}", err);
     })

@@ -195,6 +195,7 @@ mod tests {
             .network_cfg()
             .clone();
         let mut static_allocator = StaticAllocator::new();
+        let dynamic_allocator = DynamicAllocator::new();
         let subnet = Arc::new(Mutex::new(Ipv4Subnet::new(
             Ipv4Addr::new(192, 168, 0, 0),
             24,
@@ -213,6 +214,7 @@ mod tests {
         let mut registry: HookRegistry<DhcpV4Packet, DhcpV4Packet> = HookRegistry::new();
         registry.register_service(Mutex::new(net_cfg));
         registry.register_service(Mutex::new(static_allocator));
+        registry.register_service(Mutex::new(dynamic_allocator));
         let mut context: PacketContext<DhcpV4Packet, DhcpV4Packet> =
             PacketContext::from(input_packet);
         registry.register_hook(
