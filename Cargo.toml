@@ -6,8 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-derive_data = { path = "../derive_data" }
-fp_core = { path = "../fp_core" }
+fp_core = { git = "ssh://git@github.com/frozenpeach-dev/core.git" }
 chrono = "0.4.24"
 mac_address  = "1.1.4"
 itertools = "0.10.5"
@@ -19,5 +18,5 @@ serde = { version = "1.0.160", features = ["derive"] }
 serde_yaml = "0.9.21"
 mysql = "*"
 tokio = { version = "1", features = ["full"] }
-pnet = "0.33.0" 
+pnet = "0.33.0"
 serde_with = "2.3.2"
