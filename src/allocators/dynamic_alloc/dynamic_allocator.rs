@@ -68,7 +68,6 @@ impl Allocator for DynamicAllocator {
 
         let ip_addr = subnet.allocate().ok()?;
         self.subnet_map.update_subnet(subnet.clone());
-        // drop(subnet);
         Some(AllocationDraft::new(ip_addr, options))
     }
 
@@ -195,7 +194,6 @@ mod tests {
             .get_matching_subnet(Ipv4Addr::new(192, 168, 0, 17))
             .unwrap();
         let sub = sub.borrow();
-        dbg!(Vec::<u8>::from(sub.options().clone()));
         assert!(!sub.is_free(Ipv4Addr::new(192, 168, 0, 17)));
         assert!(draft.ip_addr() == Ipv4Addr::new(192, 168, 0, 17));
     }
